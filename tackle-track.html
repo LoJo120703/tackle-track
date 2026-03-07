@@ -722,11 +722,19 @@
       font-family: inherit;
       transition: background 0.15s;
     }
-    .login-btn:hover { background: var(--accent-dark); }
-    .login-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 14px; }
+    .login-btn:hover:not(:disabled) { background: var(--accent-dark); }
+    .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .login-btn-secondary {
+      background: transparent;
+      border: 1.5px solid #334155;
+      color: #94a3b8;
+    }
+    .login-btn-secondary:hover:not(:disabled) { border-color: #38bdf8; color: white; background: transparent; }
+    .login-divider { display: flex; align-items: center; gap: 10px; margin: 18px 0 0; }
     .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: #334155; }
     .login-divider span { font-size: 0.73rem; color: #475569; white-space: nowrap; }
-    .login-users { display: flex; flex-wrap: wrap; gap: 8px; }
+    .login-error { font-size: 0.82rem; color: #f87171; text-align: center; margin-top: 10px; min-height: 1.2em; }
+    .login-users { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     .login-user-btn {
       padding: 7px 14px;
       background: #0f172a;
@@ -879,11 +887,14 @@
   <div class="login-box">
     <div class="login-logo">Tackle<span>Track</span></div>
     <div class="login-tagline">Your fishing gear &amp; catch companion</div>
-    <label class="login-label" for="login-input">Enter your username</label>
-    <input class="login-input" id="login-input" type="text" placeholder="e.g. John" autocomplete="off" autocapitalize="words" maxlength="32" />
-    <button class="login-btn" onclick="loginUser()">Start Fishing</button>
+    <input class="login-input" id="login-username" type="text" placeholder="Username" autocomplete="username" autocapitalize="none" maxlength="32" style="margin-bottom:10px" />
+    <input class="login-input" id="login-password" type="password" placeholder="Password" autocomplete="current-password" />
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" id="login-signin-btn" onclick="signIn()">Sign In</button>
+    <div class="login-divider"><span>new here?</span></div>
+    <button class="login-btn login-btn-secondary" id="login-create-btn" onclick="createAccount()">Create Account</button>
     <div id="login-existing-wrap" style="display:none">
-      <div class="login-divider"><span>or continue as</span></div>
+      <div class="login-divider"><span>recent</span></div>
       <div class="login-users" id="login-users-list"></div>
     </div>
   </div>
@@ -1279,6 +1290,7 @@
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -1314,9 +1326,8 @@
   let mapPickedLng = null;
   let mapPickedAddress = null;
 
-  const USERS_KEY  = 'tt_users';
-  const ACTIVE_KEY = 'tt_active';
-  let activeUser   = null;
+  const USERS_KEY = 'tt_users';
+  let activeUser  = null;
 
   // ── Firebase ──────────────────────────────────────────────────────────────
   // Paste your Firebase config here after creating a project at console.firebase.google.com
@@ -1330,8 +1341,8 @@
   };
 
   firebase.initializeApp(FIREBASE_CONFIG);
-  const db = firebase.firestore();
-  // Enable offline persistence so the app works without internet
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
   db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
 
   function gearCol()   { return db.collection(`users/${activeUser}/gear`); }
@@ -1356,11 +1367,10 @@
 
   async function startApp(username) {
     activeUser = username;
-    localStorage.setItem(ACTIVE_KEY, username);
 
-    // Save to known users list
+    // Remember username for the "recent" list on the login screen
     const users = getUsers();
-    if (!users.includes(username)) {
+    if (!users.map(u => u.toLowerCase()).includes(username.toLowerCase())) {
       users.push(username);
       localStorage.setItem(USERS_KEY, JSON.stringify(users));
     }
@@ -1383,16 +1393,72 @@
     loadProfilePic(username).then(url => setHeaderAvatar(url));
   }
 
-  function loginUser() {
-    const input = document.getElementById('login-input');
-    const name  = input.value.trim();
-    if (!name) { input.focus(); return; }
-    startApp(name);
+  function authEmail(username) {
+    return `${username.trim().toLowerCase()}@tackletrack.app`;
+  }
+
+  function showLoginError(msg) {
+    const el = document.getElementById('login-error');
+    el.textContent = msg;
+  }
+
+  function hideLoginError() {
+    document.getElementById('login-error').textContent = '';
+  }
+
+  function setLoginBusy(busy) {
+    document.getElementById('login-signin-btn').disabled = busy;
+    document.getElementById('login-create-btn').disabled = busy;
+    document.getElementById('login-signin-btn').textContent = busy ? 'Signing in…' : 'Sign In';
+  }
+
+  async function signIn() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!username) { showLoginError('Please enter a username.'); return; }
+    if (!password) { showLoginError('Please enter a password.'); return; }
+    hideLoginError();
+    setLoginBusy(true);
+    try {
+      await auth.signInWithEmailAndPassword(authEmail(username), password);
+      // onAuthStateChanged handles transition to app
+    } catch (e) {
+      setLoginBusy(false);
+      if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-email')
+        showLoginError('Username not found or incorrect password.');
+      else if (e.code === 'auth/wrong-password')
+        showLoginError('Incorrect password.');
+      else
+        showLoginError('Sign in failed. Try again.');
+    }
+  }
+
+  async function createAccount() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!username) { showLoginError('Please enter a username.'); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) { showLoginError('Username may only contain letters, numbers, and underscores.'); return; }
+    if (!password) { showLoginError('Please enter a password.'); return; }
+    if (password.length < 6) { showLoginError('Password must be at least 6 characters.'); return; }
+    hideLoginError();
+    setLoginBusy(true);
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(authEmail(username), password);
+      await cred.user.updateProfile({ displayName: username });
+      // onAuthStateChanged handles transition to app
+    } catch (e) {
+      setLoginBusy(false);
+      if (e.code === 'auth/email-already-in-use')
+        showLoginError('That username is already taken.');
+      else if (e.code === 'auth/weak-password')
+        showLoginError('Password must be at least 6 characters.');
+      else
+        showLoginError('Could not create account. Try again.');
+    }
   }
 
   function switchUser() {
-    localStorage.removeItem(ACTIVE_KEY);
-    location.reload();
+    auth.signOut();
   }
 
   function renderLoginScreen() {
@@ -1402,8 +1468,13 @@
     if (users.length === 0) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
     list.innerHTML = users.map(u =>
-      `<button class="login-user-btn" onclick="startApp('${esc(u)}')">${esc(u)}</button>`
+      `<button class="login-user-btn" onclick="fillUsername('${esc(u)}')">${esc(u)}</button>`
     ).join('');
+  }
+
+  function fillUsername(username) {
+    document.getElementById('login-username').value = username;
+    document.getElementById('login-password').focus();
   }
 
   // ── Utils ─────────────────────────────────────────────────────────────────
@@ -2931,17 +3002,29 @@
   }, { passive: false });
 
   // ── Init ──────────────────────────────────────────────────────────────────
-  document.getElementById('login-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') loginUser();
+  document.getElementById('login-username').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-password').focus();
+  });
+  document.getElementById('login-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') signIn();
   });
 
-  const savedUser = localStorage.getItem(ACTIVE_KEY);
-  if (savedUser) {
-    startApp(savedUser);
-  } else {
-    renderLoginScreen();
-    setTimeout(() => document.getElementById('login-input').focus(), 100);
-  }
+  // Show loading while Firebase checks auth state
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('loading-overlay').classList.remove('hidden');
+
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      const username = user.displayName || user.email.split('@')[0];
+      await startApp(username);
+    } else {
+      document.getElementById('loading-overlay').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
+      renderLoginScreen();
+      setLoginBusy(false);
+      setTimeout(() => document.getElementById('login-username').focus(), 100);
+    }
+  });
 </script>
 </body>
 </html>
