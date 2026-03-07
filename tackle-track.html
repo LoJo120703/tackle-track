@@ -950,7 +950,14 @@
 
 <!-- ── Bottom Nav ── -->
 <nav>
-  <button onclick="showView('dashboard')" id="nav-dashboard" class="active">
+  <button onclick="showView('people')" id="nav-people" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    People
+  </button>
+  <button onclick="showView('dashboard')" id="nav-dashboard">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
       <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
@@ -976,13 +983,6 @@
       <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
     </svg>
     Stats
-  </button>
-  <button onclick="showView('people')" id="nav-people">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-    People
   </button>
 </nav>
 
@@ -1357,7 +1357,7 @@
     }
 
     document.getElementById('loading-overlay').classList.add('hidden');
-    renderDashboard();
+    showView('people');
     registerProfile();
     loadFollowing();
     loadProfilePic(username).then(url => setHeaderAvatar(url));
