@@ -450,6 +450,65 @@
     .btn-unfollow { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
     .btn-unfollow:hover { background: var(--bg); color: var(--danger); border-color: var(--danger); }
 
+    /* ── Inner tabs (People) ── */
+    .inner-tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 16px;
+      gap: 4px;
+    }
+    .inner-tab {
+      padding: 8px 18px;
+      border: none;
+      background: none;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      font-family: inherit;
+      transition: color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .inner-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Feed cards ── */
+    .feed-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .feed-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px 8px;
+    }
+    .feed-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .feed-username { font-weight: 700; font-size: 0.875rem; cursor: pointer; }
+    .feed-username:hover { color: var(--accent); }
+    .feed-time { margin-left: auto; font-size: 0.73rem; color: var(--muted); white-space: nowrap; }
+    .feed-body { padding: 0 14px 14px; }
+    .feed-species { font-size: 1.05rem; font-weight: 800; margin-bottom: 3px; }
+    .feed-detail { font-size: 0.83rem; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
+    .feed-notes { font-size: 0.83rem; color: var(--text); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-style: italic; }
+    .feed-weight { color: var(--accent); font-weight: 800; }
+
     /* ── User stats overlay ── */
     #user-stats-overlay .modal { max-height: 92vh; }
     .user-stats-header-card {
@@ -737,16 +796,29 @@
 
   <!-- ── People ── -->
   <div id="view-people" class="view">
-    <div class="people-search-row">
-      <input type="text" id="people-search" placeholder="Search by username..." autocomplete="off" autocapitalize="none" />
-      <button class="btn btn-primary" onclick="searchUsers()">Search</button>
+    <div class="inner-tabs">
+      <button class="inner-tab active" id="tab-feed" onclick="switchPeopleTab('feed')">Feed</button>
+      <button class="inner-tab" id="tab-anglers" onclick="switchPeopleTab('anglers')">Anglers</button>
     </div>
-    <div id="people-search-results"></div>
-    <div class="sec-header" style="margin-top:4px">
-      <span class="sec-title">Following</span>
-      <span id="following-count" style="font-size:0.82rem;color:var(--muted)"></span>
+
+    <!-- Feed panel -->
+    <div id="people-feed-panel">
+      <div id="feed-content"></div>
     </div>
-    <div id="following-list"></div>
+
+    <!-- Anglers panel -->
+    <div id="people-anglers-panel" style="display:none">
+      <div class="people-search-row">
+        <input type="text" id="people-search" placeholder="Search by username..." autocomplete="off" autocapitalize="none" />
+        <button class="btn btn-primary" onclick="searchUsers()">Search</button>
+      </div>
+      <div id="people-search-results"></div>
+      <div class="sec-header" style="margin-top:4px">
+        <span class="sec-title">Following</span>
+        <span id="following-count" style="font-size:0.82rem;color:var(--muted)"></span>
+      </div>
+      <div id="following-list"></div>
+    </div>
   </div>
 </main>
 
@@ -1271,7 +1343,7 @@
     if (v === 'gear')      renderGear();
     if (v === 'catches')   renderCatches();
     if (v === 'stats')     renderStats();
-    if (v === 'people')    renderPeopleView();
+    if (v === 'people')    { activePeopleTab === 'feed' ? renderFeed() : renderPeopleView(); }
   }
 
   function openFab() {
@@ -2079,6 +2151,97 @@
 
   function closeUserStats() {
     document.getElementById('user-stats-overlay').classList.remove('open');
+  }
+
+  // ── People tab switching ───────────────────────────────────────────────────
+  let activePeopleTab = 'feed';
+
+  function switchPeopleTab(tab) {
+    activePeopleTab = tab;
+    document.getElementById('tab-feed').classList.toggle('active', tab === 'feed');
+    document.getElementById('tab-anglers').classList.toggle('active', tab === 'anglers');
+    document.getElementById('people-feed-panel').style.display    = tab === 'feed'    ? 'block' : 'none';
+    document.getElementById('people-anglers-panel').style.display = tab === 'anglers' ? 'block' : 'none';
+    if (tab === 'feed')    renderFeed();
+    if (tab === 'anglers') renderPeopleView();
+  }
+
+  // ── Social feed ───────────────────────────────────────────────────────────
+  function timeAgo(dateStr) {
+    if (!dateStr) return '';
+    const diff = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7)   return `${diff}d ago`;
+    if (diff < 30)  return `${Math.floor(diff / 7)}w ago`;
+    if (diff < 365) return `${Math.floor(diff / 30)}mo ago`;
+    return `${Math.floor(diff / 365)}y ago`;
+  }
+
+  async function renderFeed() {
+    const el = document.getElementById('feed-content');
+
+    if (followingList.length === 0) {
+      el.innerHTML = `<div class="empty"><div class="icon">🎣</div><strong>Nothing in your feed yet</strong><p>Go to Anglers and follow some users to see their catches here.</p></div>`;
+      return;
+    }
+
+    el.innerHTML = `<div style="color:var(--muted);font-size:0.83rem;padding:8px 0">Loading feed…</div>`;
+
+    try {
+      const catchArrays = await Promise.all(
+        followingList.map(username =>
+          db.collection(`users/${username}/catches`).get()
+            .then(snap => snap.docs.map(d => ({ ...d.data(), _author: username })))
+            .catch(() => [])
+        )
+      );
+
+      const allCatches = catchArrays.flat()
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+        .slice(0, 50);
+
+      if (allCatches.length === 0) {
+        el.innerHTML = `<div class="empty"><div class="icon">🐟</div><strong>No catches yet</strong><p>The anglers you follow haven't logged any catches.</p></div>`;
+        return;
+      }
+
+      el.innerHTML = allCatches.map(c => {
+        const author = c._author;
+        const details = [
+          c.weight  ? `<span class="feed-weight">${c.weight} ${esc(c.weightUnit || 'lb')}</span>` : null,
+          c.length  ? `${c.length} ${esc(c.lengthUnit || 'in')}` : null,
+          c.location ? `📍 ${esc(c.location)}` : null,
+          c.water   ? waterLabel(c.water) : null,
+          c.weather ? weatherLabel(c.weather) : null,
+          c.clarity ? clarityLabel(c.clarity) : null,
+        ].filter(Boolean).join(' &bull; ');
+
+        return `<div class="feed-card">
+          <div class="feed-header">
+            <div class="feed-avatar" onclick="viewUserStats('${esc(author)}')">${esc(author.charAt(0).toUpperCase())}</div>
+            <div>
+              <div class="feed-username" onclick="viewUserStats('${esc(author)}')">${esc(author)}</div>
+              <div style="font-size:0.72rem;color:var(--muted)">${fmtDate(c.date)}</div>
+            </div>
+            <div class="feed-time">${timeAgo(c.date)}</div>
+          </div>
+          <div class="feed-body">
+            <div class="feed-species">🐟 ${esc(c.species)}</div>
+            ${details ? `<div class="feed-detail">${details}</div>` : ''}
+            <div class="card-badges">
+              <span class="badge ${c.water === 'salt' ? 'bg-blue' : 'bg-teal'}">${waterLabel(c.water)}</span>
+              ${c.weather ? `<span class="badge bg-gray">${weatherLabel(c.weather)}</span>` : ''}
+              ${c.clarity ? `<span class="badge bg-gray">${clarityLabel(c.clarity)}</span>` : ''}
+            </div>
+            ${c.notes ? `<div class="feed-notes">"${esc(c.notes)}"</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+
+    } catch (e) {
+      el.innerHTML = `<div class="empty"><strong>Failed to load feed</strong><p>Check your connection and try again.</p></div>`;
+    }
   }
 
   // ── Use current location (no map needed) ─────────────────────────────────
