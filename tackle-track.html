@@ -1376,10 +1376,10 @@
       console.error('Failed to load data:', e);
     }
 
+    await loadFollowing();
     document.getElementById('loading-overlay').classList.add('hidden');
     showView('people');
     registerProfile();
-    loadFollowing();
     loadProfilePic(username).then(url => setHeaderAvatar(url));
   }
 
