@@ -835,6 +835,22 @@
     .loc-wrap { display: flex; gap: 6px; }
     .loc-wrap input { flex: 1; min-width: 0; }
 
+    /* ── Feed interactions ── */
+    .feed-actions { display: flex; gap: 16px; padding: 10px 14px 4px; border-top: 1px solid var(--border); }
+    .feed-action-btn { background: none; border: none; cursor: pointer; font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 5px; font-weight: 600; padding: 4px 0; -webkit-tap-highlight-color: transparent; transition: color 0.15s; }
+    .feed-action-btn:hover { color: var(--text); }
+    .feed-action-btn.liked { color: #e11d48; }
+
+    /* ── Comments ── */
+    .feed-comments { padding: 10px 14px 14px; border-top: 1px solid var(--border); }
+    .comment-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: flex-start; }
+    .comment-body { flex: 1; min-width: 0; background: var(--bg); border-radius: var(--radius-sm); padding: 7px 10px; }
+    .comment-author { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+    .comment-text { font-size: 0.85rem; color: var(--text); margin-top: 2px; word-break: break-word; }
+    .comment-time { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+    .comment-input-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+    .comment-input-row input { flex: 1; }
+
     /* ── Visibility toggle ── */
     .visibility-row { display: flex; gap: 8px; margin-bottom: 14px; }
     .vis-btn { flex: 1; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; text-align: center; -webkit-tap-highlight-color: transparent; }
@@ -1286,6 +1302,10 @@
   let profilePicCache = {};
   let pendingFish = [];
   let catchIsPublic = true;
+  let myLikes = {};
+  let likeCounts = {};
+  let commentCounts = {};
+  let openCommentBoxes = new Set();
 
   // ── Map state ─────────────────────────────────────────────────────────────
   let mapInstance  = null;
@@ -2525,6 +2545,111 @@
     if (tab === 'anglers') renderPeopleView();
   }
 
+  // ── Likes & comments ──────────────────────────────────────────────────────
+  function catchKey(author, catchId) { return `${author}__${catchId}`; }
+
+  async function loadFeedInteractions(catches) {
+    await Promise.all(catches.map(async c => {
+      const key = catchKey(c._author, c.id);
+      try {
+        const [ls, cs] = await Promise.all([
+          db.collection(`users/${c._author}/catches/${c.id}/likes`).get(),
+          db.collection(`users/${c._author}/catches/${c.id}/comments`).get(),
+        ]);
+        likeCounts[key]    = ls.size;
+        myLikes[key]       = ls.docs.some(d => d.id === activeUser);
+        commentCounts[key] = cs.size;
+      } catch {
+        likeCounts[key] = 0; myLikes[key] = false; commentCounts[key] = 0;
+      }
+    }));
+  }
+
+  async function toggleLike(author, catchId) {
+    const key     = catchKey(author, catchId);
+    const likeRef = db.doc(`users/${author}/catches/${catchId}/likes/${activeUser}`);
+    if (myLikes[key]) {
+      myLikes[key] = false;
+      likeCounts[key] = Math.max(0, (likeCounts[key] || 1) - 1);
+      updateLikeBtn(catchId, key);
+      likeRef.delete().catch(console.error);
+    } else {
+      myLikes[key] = true;
+      likeCounts[key] = (likeCounts[key] || 0) + 1;
+      updateLikeBtn(catchId, key);
+      likeRef.set({ likedAt: new Date().toISOString(), by: activeUser }).catch(console.error);
+    }
+  }
+
+  function updateLikeBtn(catchId, key) {
+    const btn = document.getElementById(`like-btn-${catchId}`);
+    if (!btn) return;
+    btn.className = `feed-action-btn${myLikes[key] ? ' liked' : ''}`;
+    btn.innerHTML = `${myLikes[key] ? '❤️' : '🤍'} ${likeCounts[key] || 0}`;
+  }
+
+  function toggleComments(author, catchId) {
+    const key     = catchKey(author, catchId);
+    const section = document.getElementById(`comments-section-${catchId}`);
+    if (!section) return;
+    if (openCommentBoxes.has(key)) {
+      openCommentBoxes.delete(key);
+      section.style.display = 'none';
+    } else {
+      openCommentBoxes.add(key);
+      section.style.display = 'block';
+      loadComments(author, catchId);
+    }
+  }
+
+  async function loadComments(author, catchId) {
+    const listEl = document.getElementById(`comments-list-${catchId}`);
+    if (!listEl) return;
+    listEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;padding:6px 0">Loading…</div>`;
+    try {
+      const snap = await db.collection(`users/${author}/catches/${catchId}/comments`)
+        .orderBy('createdAt', 'asc').get();
+      if (snap.empty) {
+        listEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;padding:6px 0">No comments yet. Be the first!</div>`;
+        return;
+      }
+      const commentAuthors = [...new Set(snap.docs.map(d => d.data().author))];
+      await Promise.all(commentAuthors.map(u => loadProfilePic(u)));
+      listEl.innerHTML = snap.docs.map(d => {
+        const data = d.data();
+        return `<div class="comment-row">
+          ${avatarHTML(data.author, profilePicCache[data.author] || null, 28, true)}
+          <div class="comment-body">
+            <div class="comment-author">${esc(data.author)}</div>
+            <div class="comment-text">${esc(data.text)}</div>
+            <div class="comment-time">${timeAgo(data.createdAt)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    } catch {
+      listEl.innerHTML = `<div style="color:var(--danger);font-size:0.82rem">Failed to load comments.</div>`;
+    }
+  }
+
+  async function addComment(author, catchId) {
+    const input = document.getElementById(`comment-input-${catchId}`);
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    input.disabled = true;
+    const comment = { id: uid(), author: activeUser, text, createdAt: new Date().toISOString() };
+    try {
+      await db.collection(`users/${author}/catches/${catchId}/comments`).doc(comment.id).set(comment);
+      const key = catchKey(author, catchId);
+      commentCounts[key] = (commentCounts[key] || 0) + 1;
+      const countEl = document.getElementById(`comment-count-${catchId}`);
+      if (countEl) countEl.textContent = commentCounts[key];
+      loadComments(author, catchId);
+    } catch { alert('Failed to post comment. Try again.'); }
+    finally { input.disabled = false; input.focus(); }
+  }
+
   // ── Social feed ───────────────────────────────────────────────────────────
   function timeAgo(dateStr) {
     if (!dateStr) return '';
@@ -2566,9 +2691,12 @@
         return;
       }
 
-      // Load profile pics for all authors in parallel
+      // Load profile pics and interactions in parallel
       const uniqueAuthors = [...new Set(allCatches.map(c => c._author))];
-      await Promise.all(uniqueAuthors.map(u => loadProfilePic(u)));
+      await Promise.all([
+        ...uniqueAuthors.map(u => loadProfilePic(u)),
+        loadFeedInteractions(allCatches),
+      ]);
 
       el.innerHTML = allCatches.map(c => {
         const author = c._author;
@@ -2603,6 +2731,21 @@
               ${c.clarity ? `<span class="badge bg-gray">${clarityLabel(c.clarity)}</span>` : ''}
             </div>
             ${c.notes ? `<div class="feed-notes">"${esc(c.notes)}"</div>` : ''}
+          </div>
+          <div class="feed-actions">
+            <button class="feed-action-btn${myLikes[catchKey(author,c.id)] ? ' liked' : ''}" id="like-btn-${c.id}" onclick="toggleLike('${esc(author)}','${c.id}')">
+              ${myLikes[catchKey(author,c.id)] ? '❤️' : '🤍'} ${likeCounts[catchKey(author,c.id)] || 0}
+            </button>
+            <button class="feed-action-btn" onclick="toggleComments('${esc(author)}','${c.id}')">
+              💬 <span id="comment-count-${c.id}">${commentCounts[catchKey(author,c.id)] || 0}</span>
+            </button>
+          </div>
+          <div class="feed-comments" id="comments-section-${c.id}" style="display:none">
+            <div class="comments-list" id="comments-list-${c.id}"></div>
+            <div class="comment-input-row">
+              <input type="text" id="comment-input-${c.id}" placeholder="Add a comment…" autocomplete="off" onkeydown="if(event.key==='Enter')addComment('${esc(author)}','${c.id}')" />
+              <button class="btn btn-primary btn-sm" onclick="addComment('${esc(author)}','${c.id}')">Post</button>
+            </div>
           </div>
         </div>`;
       }).join('');
