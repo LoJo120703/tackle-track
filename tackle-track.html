@@ -493,6 +493,72 @@
     .btn-unfollow { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
     .btn-unfollow:hover { background: var(--bg); color: var(--danger); border-color: var(--danger); }
 
+    /* ── Public / Private toggle ── */
+    .visibility-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .vis-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.83rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    #vis-public.active  { background: #dcfce7; border-color: var(--success); color: var(--success); }
+    #vis-private.active { background: #f1f5f9; border-color: #475569; color: #475569; }
+
+    /* ── Fish entries ── */
+    .fish-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; margin-top: 4px; }
+    .fish-entry {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .fish-entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .fish-entry-num { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .btn-fish-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 4px; font-family: inherit; }
+    .btn-fish-remove:hover { background: #fee2e2; color: var(--danger); }
+    .fish-measurements { display: flex; gap: 6px; margin-bottom: 10px; }
+    .fish-measurements input { flex: 2; min-width: 0; padding: 8px 8px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: inherit; outline: none; background: var(--surface); color: var(--text); }
+    .fish-measurements select { flex: 1; min-width: 0; padding: 8px 6px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.8rem; font-family: inherit; outline: none; background: var(--surface); color: var(--text); -webkit-appearance: none; }
+    .fish-measurements input:focus, .fish-measurements select:focus { border-color: var(--accent); }
+    .fish-species-input { width: 100%; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: inherit; outline: none; background: var(--surface); color: var(--text); margin-bottom: 8px; }
+    .fish-species-input:focus { border-color: var(--accent); }
+    .gear-chips-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+    .gear-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      font-size: 0.73rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .gear-chip.selected { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
+    .fish-empty { text-align: center; padding: 16px; color: var(--muted); font-size: 0.83rem; border: 1.5px dashed var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; }
+
+    /* ── Multi-fish card display ── */
+    .fish-list-card { margin-top: 8px; }
+    .fish-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.83rem; }
+    .fish-row:last-child { border-bottom: none; }
+    .fish-row-species { font-weight: 700; flex: 1; }
+    .fish-row-stats { color: var(--muted); white-space: nowrap; }
+
     /* ── Inner tabs (People) ── */
     .inner-tabs {
       display: flex;
@@ -768,6 +834,19 @@
     .map-pin-btn svg { width: 20px; height: 20px; }
     .loc-wrap { display: flex; gap: 6px; }
     .loc-wrap input { flex: 1; min-width: 0; }
+
+    /* ── Visibility toggle ── */
+    .visibility-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .vis-btn { flex: 1; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; text-align: center; -webkit-tap-highlight-color: transparent; }
+    #vis-public.active  { background: #dcfce7; border-color: var(--success); color: var(--success); }
+    #vis-private.active { background: #f1f5f9; border-color: #475569; color: #475569; }
+
+    /* ── Fish entries ── */
+    .fish-entries { margin-bottom: 10px; }
+    .fish-entry { background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; }
+    .fish-entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .fish-measurements { display: grid; grid-template-columns: 2fr 1fr 2fr 1fr; gap: 6px; margin-top: 6px; }
+    .fish-measurements .form-group { margin-bottom: 0; }
   </style>
 </head>
 <body>
@@ -1029,12 +1108,15 @@
       <button class="modal-close" onclick="closeCatchModal()">&times;</button>
     </div>
     <div class="modal-body">
+      <div class="visibility-row">
+        <button type="button" class="vis-btn active" id="vis-public" onclick="setVisibility(true)">🌐 Public Post</button>
+        <button type="button" class="vis-btn" id="vis-private" onclick="setVisibility(false)">🔒 Private Log</button>
+      </div>
       <div class="form-row">
-        <div class="form-group" id="fg-cspecies">
-          <label for="c-species">Species *</label>
-          <input type="text" id="c-species" placeholder="e.g. Largemouth Bass" list="species-list" />
-          <datalist id="species-list"></datalist>
-          <div class="err-msg">Species is required.</div>
+        <div class="form-group" id="fg-cdate">
+          <label for="c-date">Date *</label>
+          <input type="date" id="c-date" />
+          <div class="err-msg">Date is required.</div>
         </div>
         <div class="form-group">
           <label for="c-water">Water Type</label>
@@ -1044,53 +1126,27 @@
           </select>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group" id="fg-cdate">
-          <label for="c-date">Date *</label>
-          <input type="date" id="c-date" />
-          <div class="err-msg">Date is required.</div>
-        </div>
-        <div class="form-group">
-          <label for="c-location">Location</label>
-          <div class="loc-wrap">
-            <input type="text" id="c-location" placeholder="e.g. Lake Erie" />
-            <button type="button" class="map-pin-btn" id="cur-loc-btn" onclick="useCurrentLocation()" title="Use current location">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
-              </svg>
-            </button>
-            <button type="button" class="map-pin-btn" onclick="openMapPicker()" title="Pick on map">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-              </svg>
-            </button>
-          </div>
+      <div class="form-group">
+        <label for="c-location">Location</label>
+        <div class="loc-wrap">
+          <input type="text" id="c-location" placeholder="e.g. Lake Erie" />
+          <button type="button" class="map-pin-btn" id="cur-loc-btn" onclick="useCurrentLocation()" title="Use current location">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+            </svg>
+          </button>
+          <button type="button" class="map-pin-btn" onclick="openMapPicker()" title="Pick on map">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+          </button>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="c-weight">Weight</label>
-          <input type="number" id="c-weight" min="0" step="0.01" placeholder="0.0" />
-        </div>
-        <div class="form-group">
-          <label for="c-weight-unit">Unit</label>
-          <select id="c-weight-unit">
-            <option value="lb">lb</option>
-            <option value="kg">kg</option>
-            <option value="oz">oz</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="c-length">Length</label>
-          <input type="number" id="c-length" min="0" step="0.1" placeholder="0" />
-        </div>
-        <div class="form-group">
-          <label for="c-length-unit">Unit</label>
-          <select id="c-length-unit">
-            <option value="in">in</option>
-            <option value="cm">cm</option>
-          </select>
-        </div>
+      <div class="form-group">
+        <label>Fish Caught</label>
+        <div class="fish-entries" id="fish-entries-list"></div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addFishEntry()">+ Add Fish</button>
+        <datalist id="species-list"></datalist>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1120,7 +1176,7 @@
           <input type="text" class="gear-picker-search" id="gear-search" placeholder="Search gear..." oninput="filterGearPicker()" />
           <div class="gear-picker-list" id="gear-picker-list"></div>
         </div>
-        <div class="hint">Select the lure, bait, or tackle used for this catch.</div>
+        <div class="hint">Select the lure, bait, or tackle used for this session.</div>
       </div>
       <div class="form-group">
         <label>Photo</label>
@@ -1228,6 +1284,8 @@
   let peopleSearchResults = [];
   let pendingCatchPhotoURL = null;
   let profilePicCache = {};
+  let pendingFish = [];
+  let catchIsPublic = true;
 
   // ── Map state ─────────────────────────────────────────────────────────────
   let mapInstance  = null;
@@ -1388,7 +1446,9 @@
   }
 
   function getSpeciesList() {
-    return [...new Set(catches.map(c => c.species).filter(Boolean))].sort();
+    const sp = new Set();
+    catches.forEach(c => getCatchFish(c).forEach(f => { if (f.species) sp.add(f.species); }));
+    return [...sp].sort();
   }
 
   function getCatchesForGear(gearId) {
@@ -1421,7 +1481,7 @@
   // ── Dashboard ─────────────────────────────────────────────────────────────
   function renderDashboard() {
     const lowStock = gear.filter(isLow);
-    const species = [...new Set(catches.map(c => c.species).filter(Boolean))];
+    const species = [...new Set(catches.flatMap(c => getCatchFish(c).map(f => f.species)).filter(Boolean))];
 
     // Stats
     document.getElementById('dash-stats').innerHTML = `
@@ -1448,13 +1508,16 @@
     } else {
       catchEl.innerHTML = recent.map(c => {
         const gearNames = (c.gearIds || []).map(id => gear.find(g => g.id === id)?.name).filter(Boolean);
+        const fish = getCatchFish(c);
+        const fishNames = fish.map(f => esc(f.species || 'Unknown')).join(', ');
+        const bigFish = fish.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight)[0];
         return `<div class="catch-row">
           <div class="catch-icon">🐟</div>
           <div class="catch-info">
-            <div class="catch-name">${esc(c.species)}</div>
+            <div class="catch-name">${fishNames}</div>
             <div class="catch-meta">${fmtDate(c.date)}${c.location ? ' &bull; ' + esc(c.location) : ''}${gearNames.length ? ' &bull; ' + esc(gearNames[0]) : ''}</div>
           </div>
-          ${c.weight ? `<div class="catch-weight">${c.weight} ${esc(c.weightUnit||'lb')}</div>` : ''}
+          ${bigFish ? `<div class="catch-weight">${bigFish.weight} ${esc(bigFish.weightUnit||'lb')}</div>` : ''}
         </div>`;
       }).join('');
     }
@@ -1554,21 +1617,26 @@
 
     el.innerHTML = filtered.map(c => {
       const gearNames = (c.gearIds || []).map(id => gear.find(g => g.id === id)?.name).filter(Boolean);
+      const fish = getCatchFish(c);
+      const fishNames = fish.map(f => esc(f.species || 'Unknown')).join(', ');
+      const bigFish = fish.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight)[0];
+      const primarySpecies = fish[0]?.species || 'Unknown';
       return `<div class="card" style="padding:0;overflow:hidden">
-        ${c.photoURL ? `<img src="${esc(c.photoURL)}" class="catch-card-photo" alt="${esc(c.species)}" />` : ''}
+        ${c.photoURL ? `<img src="${esc(c.photoURL)}" class="catch-card-photo" alt="${esc(primarySpecies)}" />` : ''}
         <div style="padding:14px">
         <div class="card-top">
           <div>
-            <div class="card-name">${esc(c.species)}</div>
+            <div class="card-name">${fishNames}${fish.length > 1 ? ` <span style="font-size:0.8rem;font-weight:400;color:var(--muted)">(${fish.length})</span>` : ''}</div>
             <div class="card-sub">${fmtDate(c.date)}${c.location ? ' &bull; ' + esc(c.location) : ''}</div>
           </div>
           <div style="text-align:right;flex-shrink:0">
-            ${c.weight ? `<div style="font-weight:800;color:var(--accent)">${c.weight} ${esc(c.weightUnit||'lb')}</div>` : ''}
-            ${c.length ? `<div style="font-size:0.78rem;color:var(--muted)">${c.length} ${esc(c.lengthUnit||'in')}</div>` : ''}
+            ${bigFish ? `<div style="font-weight:800;color:var(--accent)">${bigFish.weight} ${esc(bigFish.weightUnit||'lb')}</div>` : ''}
+            ${bigFish?.length ? `<div style="font-size:0.78rem;color:var(--muted)">${bigFish.length} ${esc(bigFish.lengthUnit||'in')}</div>` : ''}
           </div>
         </div>
         <div class="card-badges">
           <span class="badge ${c.water === 'salt' ? 'bg-blue' : 'bg-teal'}">${waterLabel(c.water)}</span>
+          ${c.isPublic === false ? `<span class="badge bg-gray">🔒 Private</span>` : ''}
           ${c.weather  ? `<span class="badge bg-gray">${weatherLabel(c.weather)}</span>` : ''}
           ${c.clarity  ? `<span class="badge bg-gray">${clarityLabel(c.clarity)}</span>` : ''}
           ${gearNames.map(n => `<span class="badge bg-amber">${esc(n)}</span>`).join('')}
@@ -1577,7 +1645,7 @@
         <div class="card-actions">
           <button class="btn btn-ghost btn-sm" onclick="duplicateCatch('${c.id}')">Duplicate</button>
           <button class="btn btn-ghost btn-sm" onclick="openCatchModal('${c.id}')">Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="openDeleteConfirm('catch','${c.id}','${esc(c.species)} on ${esc(fmtDate(c.date))}')">Delete</button>
+          <button class="btn btn-danger btn-sm" onclick="openDeleteConfirm('catch','${c.id}','${esc(primarySpecies)} on ${esc(fmtDate(c.date))}')">Delete</button>
         </div>
         </div>
       </div>`;
@@ -1603,18 +1671,18 @@
     // Top gear by catch count
     const gearPerf = gear.map(g => {
       const cs = getCatchesForGear(g.id);
-      const weights = cs.map(c => c.weight).filter(w => w > 0);
+      const weights = cs.flatMap(c => getCatchFish(c).map(f => f.weight)).filter(w => w > 0);
       return {
         g,
         count: cs.length,
         avgWeight: weights.length ? (weights.reduce((a,b) => a+b, 0) / weights.length).toFixed(1) : null,
-        species: [...new Set(cs.map(c => c.species).filter(Boolean))]
+        species: [...new Set(cs.flatMap(c => getCatchFish(c).map(f => f.species)).filter(Boolean))]
       };
     }).filter(x => x.count > 0).sort((a,b) => b.count - a.count);
 
     // Species breakdown
     const speciesMap = {};
-    catches.forEach(c => { if (c.species) speciesMap[c.species] = (speciesMap[c.species] || 0) + 1; });
+    catches.forEach(c => { getCatchFish(c).forEach(f => { if (f.species) speciesMap[f.species] = (speciesMap[f.species] || 0) + 1; }); });
     const speciesList = Object.entries(speciesMap).sort((a,b) => b[1]-a[1]);
 
     // Water type
@@ -1640,7 +1708,8 @@
     const maxSp   = speciesList[0]?.[1] || 1;
 
     // Biggest catches
-    const biggest = [...catches].filter(c => c.weight > 0).sort((a,b) => b.weight - a.weight).slice(0, 5);
+    const allFishFlat = catches.flatMap(c => getCatchFish(c).map(f => ({ ...f, date: c.date, location: c.location })));
+    const biggest = allFishFlat.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight).slice(0, 5);
 
     document.getElementById('stats-content').innerHTML = `
       <div class="stats-grid">
@@ -1834,10 +1903,9 @@
       const c = catches.find(x => x.id === id);
       if (!c) return;
       document.getElementById('catch-modal-title').textContent = 'Edit Catch';
-      document.getElementById('c-species').value     = c.species;
-      document.getElementById('c-water').value       = c.water || 'fresh';
-      document.getElementById('c-date').value        = c.date;
-      document.getElementById('c-location').value    = c.location || '';
+      document.getElementById('c-water').value    = c.water || 'fresh';
+      document.getElementById('c-date').value     = c.date;
+      document.getElementById('c-location').value = c.location || '';
       pendingLat = c.lat ?? null;
       pendingLng = c.lng ?? null;
       if (c.photoURL) {
@@ -1848,13 +1916,17 @@
         document.getElementById('catch-photo-status').textContent = 'Photo attached';
         document.getElementById('catch-photo-remove').style.display = 'inline-flex';
       }
-      document.getElementById('c-weight').value      = c.weight || '';
-      document.getElementById('c-weight-unit').value = c.weightUnit || 'lb';
-      document.getElementById('c-length').value      = c.length || '';
-      document.getElementById('c-length-unit').value = c.lengthUnit || 'in';
-      document.getElementById('c-weather').value     = c.weather || '';
-      document.getElementById('c-clarity').value     = c.clarity || '';
-      document.getElementById('c-notes').value       = c.notes || '';
+      document.getElementById('c-weather').value = c.weather || '';
+      document.getElementById('c-clarity').value = c.clarity || '';
+      document.getElementById('c-notes').value   = c.notes || '';
+      pendingFish = getCatchFish(c).map(f => ({
+        species: f.species || '', weight: f.weight ?? '', weightUnit: f.weightUnit || 'lb',
+        length: f.length ?? '', lengthUnit: f.lengthUnit || 'in',
+      }));
+      if (pendingFish.length === 0) pendingFish = [{ species: '', weight: '', weightUnit: 'lb', length: '', lengthUnit: 'in' }];
+      catchIsPublic = c.isPublic !== false;
+      renderFishList();
+      setVisibility(catchIsPublic);
       renderGearPicker(c.gearIds || []);
     } else {
       document.getElementById('catch-modal-title').textContent = 'Log Catch';
@@ -1864,7 +1936,10 @@
     }
 
     document.getElementById('catch-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('c-species').focus(), 100);
+    setTimeout(() => {
+      const first = document.getElementById('fish-species-0');
+      if (first) first.focus();
+    }, 100);
   }
 
   function closeCatchModal() {
@@ -1873,19 +1948,20 @@
   }
 
   function clearCatchForm() {
-    ['c-species','c-location','c-weight','c-length','c-notes'].forEach(id => {
+    ['c-location','c-notes'].forEach(id => {
       document.getElementById(id).value = '';
     });
-    document.getElementById('c-water').value       = 'fresh';
-    document.getElementById('c-date').value        = today();
-    document.getElementById('c-weight-unit').value = 'lb';
-    document.getElementById('c-length-unit').value = 'in';
-    document.getElementById('c-weather').value     = '';
-    document.getElementById('c-clarity').value     = '';
-    document.getElementById('gear-search').value   = '';
+    document.getElementById('c-water').value   = 'fresh';
+    document.getElementById('c-date').value    = today();
+    document.getElementById('c-weather').value = '';
+    document.getElementById('c-clarity').value = '';
+    document.getElementById('gear-search').value = '';
     removeCatchPhoto();
-    clearErr('fg-cspecies');
     clearErr('fg-cdate');
+    pendingFish = [{ species: '', weight: '', weightUnit: 'lb', length: '', lengthUnit: 'in' }];
+    catchIsPublic = true;
+    renderFishList();
+    setVisibility(true);
   }
 
   function renderGearPicker(selectedIds) {
@@ -1918,34 +1994,30 @@
   }
 
   function saveCatch() {
-    const species = document.getElementById('c-species').value.trim();
-    const date    = document.getElementById('c-date').value;
-    let valid = true;
+    const date = document.getElementById('c-date').value;
+    if (!date) { setErr('fg-cdate', 'c-date'); return; } else clearErr('fg-cdate');
 
-    if (!species) { setErr('fg-cspecies', 'c-species'); valid = false; } else clearErr('fg-cspecies');
-    if (!date)    { setErr('fg-cdate',    'c-date');    valid = false; } else clearErr('fg-cdate');
-
-    if (!valid) return;
-
-    const weightRaw = document.getElementById('c-weight').value.trim();
-    const lengthRaw = document.getElementById('c-length').value.trim();
+    const fish = collectFishData();
+    if (fish.length === 0) {
+      const el = document.getElementById('fish-entries-list');
+      if (el) { el.style.outline = '2px solid var(--danger)'; el.style.borderRadius = 'var(--radius-sm)'; setTimeout(() => { el.style.outline = ''; }, 1500); }
+      return;
+    }
 
     const entry = {
-      species,
-      water:      document.getElementById('c-water').value,
+      species:  fish[0].species,  // primary species (backward compat)
+      fish,
+      isPublic: catchIsPublic,
+      water:    document.getElementById('c-water').value,
       date,
-      location:   document.getElementById('c-location').value.trim(),
-      weight:     weightRaw ? parseFloat(weightRaw) : null,
-      weightUnit: document.getElementById('c-weight-unit').value,
-      length:     lengthRaw ? parseFloat(lengthRaw) : null,
-      lengthUnit: document.getElementById('c-length-unit').value,
-      weather:    document.getElementById('c-weather').value,
-      clarity:    document.getElementById('c-clarity').value,
-      gearIds:    getCheckedGearIds(),
-      notes:      document.getElementById('c-notes').value.trim(),
-      lat:        pendingLat,
-      lng:        pendingLng,
-      photoURL:   pendingCatchPhotoURL,
+      location: document.getElementById('c-location').value.trim(),
+      weather:  document.getElementById('c-weather').value,
+      clarity:  document.getElementById('c-clarity').value,
+      gearIds:  getCheckedGearIds(),
+      notes:    document.getElementById('c-notes').value.trim(),
+      lat:      pendingLat,
+      lng:      pendingLng,
+      photoURL: pendingCatchPhotoURL,
     };
 
     let saved;
@@ -1961,7 +2033,6 @@
     syncCatch(saved);
     closeCatchModal();
     renderCatches();
-    // update species datalist
     document.getElementById('species-list').innerHTML = getSpeciesList().map(s => `<option value="${esc(s)}"></option>`).join('');
   }
 
@@ -1998,6 +2069,93 @@
     catches.push(copy);
     syncCatch(copy);
     renderCatches();
+  }
+
+  // ── Multi-fish / public-private helpers ───────────────────────────────────
+  function getCatchFish(c) {
+    if (c.fish && c.fish.length > 0) return c.fish;
+    if (c.species) return [{ species: c.species, weight: c.weight, weightUnit: c.weightUnit || 'lb', length: c.length, lengthUnit: c.lengthUnit || 'in' }];
+    return [];
+  }
+
+  function setVisibility(isPublic) {
+    catchIsPublic = isPublic;
+    document.getElementById('vis-public').classList.toggle('active', isPublic);
+    document.getElementById('vis-private').classList.toggle('active', !isPublic);
+  }
+
+  function syncFishFromDOM() {
+    pendingFish = pendingFish.map((_, i) => ({
+      species:    (document.getElementById(`fish-species-${i}`)?.value || '').trim(),
+      weight:     document.getElementById(`fish-weight-${i}`)?.value || '',
+      weightUnit: document.getElementById(`fish-weight-unit-${i}`)?.value || 'lb',
+      length:     document.getElementById(`fish-length-${i}`)?.value || '',
+      lengthUnit: document.getElementById(`fish-length-unit-${i}`)?.value || 'in',
+    }));
+  }
+
+  function addFishEntry() {
+    syncFishFromDOM();
+    pendingFish.push({ species: '', weight: '', weightUnit: 'lb', length: '', lengthUnit: 'in' });
+    renderFishList();
+  }
+
+  function removeFishEntry(idx) {
+    syncFishFromDOM();
+    pendingFish.splice(idx, 1);
+    renderFishList();
+  }
+
+  function renderFishList() {
+    const el = document.getElementById('fish-entries-list');
+    if (!el) return;
+    el.innerHTML = pendingFish.map((f, i) => `
+      <div class="fish-entry">
+        <div class="fish-entry-header">
+          <span>Fish ${i + 1}</span>
+          ${pendingFish.length > 1 ? `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);padding:2px 8px;font-size:0.75rem" onclick="removeFishEntry(${i})">Remove</button>` : ''}
+        </div>
+        <input type="text" id="fish-species-${i}" placeholder="Species (e.g. Bass)" list="species-list" value="${esc(f.species)}" autocomplete="off" style="width:100%;margin-bottom:0" />
+        <div class="fish-measurements">
+          <div class="form-group">
+            <label style="font-size:0.73rem">Weight</label>
+            <input type="number" id="fish-weight-${i}" min="0" step="0.01" placeholder="0.0" value="${esc(f.weight)}" />
+          </div>
+          <div class="form-group">
+            <label style="font-size:0.73rem">&nbsp;</label>
+            <select id="fish-weight-unit-${i}">
+              <option value="lb" ${f.weightUnit==='lb'?'selected':''}>lb</option>
+              <option value="kg" ${f.weightUnit==='kg'?'selected':''}>kg</option>
+              <option value="oz" ${f.weightUnit==='oz'?'selected':''}>oz</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size:0.73rem">Length</label>
+            <input type="number" id="fish-length-${i}" min="0" step="0.1" placeholder="0" value="${esc(f.length)}" />
+          </div>
+          <div class="form-group">
+            <label style="font-size:0.73rem">&nbsp;</label>
+            <select id="fish-length-unit-${i}">
+              <option value="in" ${f.lengthUnit==='in'?'selected':''}>in</option>
+              <option value="cm" ${f.lengthUnit==='cm'?'selected':''}>cm</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function collectFishData() {
+    syncFishFromDOM();
+    return pendingFish
+      .map(f => ({
+        species:    f.species,
+        weight:     f.weight ? parseFloat(f.weight) : null,
+        weightUnit: f.weightUnit,
+        length:     f.length ? parseFloat(f.length) : null,
+        lengthUnit: f.lengthUnit,
+      }))
+      .filter(f => f.species);
   }
 
   // ── Form helpers ──────────────────────────────────────────────────────────
@@ -2219,7 +2377,7 @@
           db.collection(`users/${u}/followers`).get()
         ]);
         const catchDocs = cs.docs.map(d => d.data());
-        const species = [...new Set(catchDocs.map(c => c.species).filter(Boolean))];
+        const species = [...new Set(catchDocs.flatMap(c => getCatchFish(c).map(f => f.species)).filter(Boolean))];
         return { username: u, catches: cs.size, gear: gs.size, followers: fs.size, species };
       } catch { return { username: u, catches: 0, gear: 0, followers: 0, species: [] }; }
     }));
@@ -2281,7 +2439,7 @@
       const followingCount = followingSnap.size;
 
       const speciesMap = {};
-      uCatches.forEach(c => { if (c.species) speciesMap[c.species] = (speciesMap[c.species] || 0) + 1; });
+      uCatches.forEach(c => { getCatchFish(c).forEach(f => { if (f.species) speciesMap[f.species] = (speciesMap[f.species] || 0) + 1; }); });
       const speciesList = Object.entries(speciesMap).sort((a,b) => b[1]-a[1]);
 
       const gearPerf = uGear.map(g => {
@@ -2289,7 +2447,8 @@
         return { g, count };
       }).filter(x => x.count > 0).sort((a,b) => b.count - a.count);
 
-      const biggest = [...uCatches].filter(c => c.weight > 0).sort((a,b) => b.weight - a.weight).slice(0,3);
+      const allFishU = uCatches.flatMap(c => getCatchFish(c).map(f => ({ ...f, date: c.date, location: c.location })));
+      const biggest = allFishU.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight).slice(0,3);
       const maxSp   = speciesList[0]?.[1] || 1;
       const maxGear = gearPerf[0]?.count || 1;
       const isFollowing = followingList.includes(username);
@@ -2403,6 +2562,7 @@
       );
 
       const allCatches = catchArrays.flat()
+        .filter(c => c.isPublic !== false)
         .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
         .slice(0, 50);
 
@@ -2418,9 +2578,12 @@
       el.innerHTML = allCatches.map(c => {
         const author = c._author;
         const picUrl = profilePicCache[author] || null;
+        const fish = getCatchFish(c);
+        const bigFish = fish.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight)[0];
+        const fishLine = fish.map(f => esc(f.species || 'Unknown')).join(', ');
         const details = [
-          c.weight   ? `<span class="feed-weight">${c.weight} ${esc(c.weightUnit || 'lb')}</span>` : null,
-          c.length   ? `${c.length} ${esc(c.lengthUnit || 'in')}` : null,
+          bigFish ? `<span class="feed-weight">${bigFish.weight} ${esc(bigFish.weightUnit || 'lb')}</span>` : null,
+          bigFish?.length ? `${bigFish.length} ${esc(bigFish.lengthUnit || 'in')}` : null,
           c.location ? `📍 ${esc(c.location)}` : null,
           c.weather  ? weatherLabel(c.weather) : null,
           c.clarity  ? clarityLabel(c.clarity) : null,
@@ -2435,9 +2598,9 @@
             </div>
             <div class="feed-time">${timeAgo(c.date)}</div>
           </div>
-          ${c.photoURL ? `<img src="${esc(c.photoURL)}" class="feed-photo" alt="${esc(c.species)}" />` : ''}
+          ${c.photoURL ? `<img src="${esc(c.photoURL)}" class="feed-photo" alt="${esc(fish[0]?.species || '')}" />` : ''}
           <div class="feed-body">
-            <div class="feed-species">🐟 ${esc(c.species)}</div>
+            <div class="feed-species">🐟 ${fishLine}${fish.length > 1 ? ` <span style="font-size:0.8rem;color:var(--muted)">(${fish.length} fish)</span>` : ''}</div>
             ${details ? `<div class="feed-detail">${details}</div>` : ''}
             <div class="card-badges">
               <span class="badge ${c.water === 'salt' ? 'bg-blue' : 'bg-teal'}">${waterLabel(c.water)}</span>
