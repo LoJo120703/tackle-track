@@ -905,7 +905,7 @@
   <div class="header-user">
     <div class="header-avatar" id="header-avatar" title="Change profile picture" onclick="document.getElementById('profile-pic-input').click()"></div>
     <input type="file" id="profile-pic-input" accept="image/*" style="display:none" onchange="handleProfilePicUpload(this)" />
-    <span class="header-username" id="header-username"></span>
+    <span class="header-username" id="header-username" onclick="viewUserStats(activeUser)" style="cursor:pointer" title="View your profile"></span>
     <button class="header-switch" onclick="switchUser()">Switch</button>
   </div>
 </header>
