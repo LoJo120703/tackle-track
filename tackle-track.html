@@ -1453,7 +1453,7 @@
       else if (e.code === 'auth/weak-password')
         showLoginError('Password must be at least 6 characters.');
       else
-        showLoginError('Could not create account. Try again.');
+        showLoginError(`Could not create account. (${e.code || e.message})`);
     }
   }
 
