@@ -415,6 +415,49 @@
     .gear-pick-sub { font-size: 0.73rem; color: var(--muted); }
     .gear-picker-empty { padding: 20px; text-align: center; font-size: 0.83rem; color: var(--muted); }
 
+    /* ── Profile pictures & photos ── */
+    .header-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #1e293b;
+      color: #38bdf8;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85rem;
+      cursor: pointer; flex-shrink: 0;
+      background-size: cover; background-position: center;
+      border: 2px solid #334155;
+      transition: border-color 0.15s;
+      overflow: hidden;
+    }
+    .header-avatar:hover { border-color: #38bdf8; }
+    .header-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+    .catch-photo-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      min-height: 120px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; overflow: hidden; position: relative;
+      background: var(--bg);
+      transition: border-color 0.15s;
+    }
+    .catch-photo-area:hover { border-color: var(--accent); }
+    .catch-photo-placeholder { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); padding: 20px; }
+    .catch-photo-placeholder svg { width: 28px; height: 28px; }
+    .catch-photo-placeholder span { font-size: 0.82rem; font-weight: 600; }
+    .catch-photo-preview { width: 100%; max-height: 240px; object-fit: cover; display: block; }
+    .catch-card-photo { width: 100%; max-height: 220px; object-fit: cover; display: block; border-radius: var(--radius) var(--radius) 0 0; }
+    .feed-photo { width: 100%; max-height: 300px; object-fit: cover; display: block; }
+
+    .avatar-img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .user-avatar img, .feed-avatar img, .user-stats-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+    .photo-status { font-size: 0.73rem; color: var(--muted); margin-top: 4px; min-height: 1em; }
+
     /* ── People view ── */
     .people-search-row { display: flex; gap: 8px; margin-bottom: 16px; }
     .people-search-row input { flex: 1; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.9rem; font-family: inherit; outline: none; background: var(--surface); color: var(--text); }
@@ -754,6 +797,8 @@
 <header>
   <div class="logo">Tackle<span>Track</span></div>
   <div class="header-user">
+    <div class="header-avatar" id="header-avatar" title="Change profile picture" onclick="document.getElementById('profile-pic-input').click()"></div>
+    <input type="file" id="profile-pic-input" accept="image/*" style="display:none" onchange="handleProfilePicUpload(this)" />
     <span class="header-username" id="header-username"></span>
     <button class="header-switch" onclick="switchUser()">Switch</button>
   </div>
@@ -1078,6 +1123,24 @@
         <div class="hint">Select the lure, bait, or tackle used for this catch.</div>
       </div>
       <div class="form-group">
+        <label>Photo</label>
+        <div class="catch-photo-area" id="catch-photo-area" onclick="document.getElementById('catch-photo-input').click()">
+          <div class="catch-photo-placeholder" id="catch-photo-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span>Tap to add a photo</span>
+          </div>
+          <img id="catch-photo-img" class="catch-photo-preview" style="display:none" alt="Catch photo" />
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
+          <span class="photo-status" id="catch-photo-status"></span>
+          <button type="button" class="btn btn-ghost btn-sm" id="catch-photo-remove" style="display:none" onclick="removeCatchPhoto()">Remove</button>
+        </div>
+        <input type="file" id="catch-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleCatchPhoto(this)" />
+      </div>
+      <div class="form-group">
         <label for="c-notes">Notes</label>
         <input type="text" id="c-notes" placeholder="Any extra details..." />
       </div>
@@ -1163,6 +1226,8 @@
   let pendingLng = null;
   let followingList = [];
   let peopleSearchResults = [];
+  let pendingCatchPhotoURL = null;
+  let profilePicCache = {};
 
   // ── Map state ─────────────────────────────────────────────────────────────
   let mapInstance  = null;
@@ -1223,6 +1288,7 @@
     }
 
     document.getElementById('header-username').textContent = username;
+    document.getElementById('header-avatar').textContent = username.charAt(0).toUpperCase();
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('loading-overlay').classList.remove('hidden');
 
@@ -1236,6 +1302,7 @@
     renderDashboard();
     registerProfile();
     loadFollowing();
+    loadProfilePic(username).then(url => setHeaderAvatar(url));
   }
 
   function loginUser() {
@@ -1487,7 +1554,9 @@
 
     el.innerHTML = filtered.map(c => {
       const gearNames = (c.gearIds || []).map(id => gear.find(g => g.id === id)?.name).filter(Boolean);
-      return `<div class="card">
+      return `<div class="card" style="padding:0;overflow:hidden">
+        ${c.photoURL ? `<img src="${esc(c.photoURL)}" class="catch-card-photo" alt="${esc(c.species)}" />` : ''}
+        <div style="padding:14px">
         <div class="card-top">
           <div>
             <div class="card-name">${esc(c.species)}</div>
@@ -1509,6 +1578,7 @@
           <button class="btn btn-ghost btn-sm" onclick="duplicateCatch('${c.id}')">Duplicate</button>
           <button class="btn btn-ghost btn-sm" onclick="openCatchModal('${c.id}')">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="openDeleteConfirm('catch','${c.id}','${esc(c.species)} on ${esc(fmtDate(c.date))}')">Delete</button>
+        </div>
         </div>
       </div>`;
     }).join('');
@@ -1770,6 +1840,14 @@
       document.getElementById('c-location').value    = c.location || '';
       pendingLat = c.lat ?? null;
       pendingLng = c.lng ?? null;
+      if (c.photoURL) {
+        pendingCatchPhotoURL = c.photoURL;
+        document.getElementById('catch-photo-img').src = c.photoURL;
+        document.getElementById('catch-photo-img').style.display = 'block';
+        document.getElementById('catch-photo-placeholder').style.display = 'none';
+        document.getElementById('catch-photo-status').textContent = 'Photo attached';
+        document.getElementById('catch-photo-remove').style.display = 'inline-flex';
+      }
       document.getElementById('c-weight').value      = c.weight || '';
       document.getElementById('c-weight-unit').value = c.weightUnit || 'lb';
       document.getElementById('c-length').value      = c.length || '';
@@ -1805,6 +1883,7 @@
     document.getElementById('c-weather').value     = '';
     document.getElementById('c-clarity').value     = '';
     document.getElementById('gear-search').value   = '';
+    removeCatchPhoto();
     clearErr('fg-cspecies');
     clearErr('fg-cdate');
   }
@@ -1866,6 +1945,7 @@
       notes:      document.getElementById('c-notes').value.trim(),
       lat:        pendingLat,
       lng:        pendingLng,
+      photoURL:   pendingCatchPhotoURL,
     };
 
     let saved;
@@ -1930,6 +2010,126 @@
     fg.classList.remove('has-err');
     const inp = fg.querySelector('input,select');
     if (inp) inp.classList.remove('err');
+  }
+
+  // ── Image helpers ─────────────────────────────────────────────────────────
+  const CLOUDINARY_URL    = 'https://api.cloudinary.com/v1_1/dfpwbpajh/image/upload';
+  const CLOUDINARY_PRESET = 'tackletrack';
+
+  function compressImage(file, maxDim, quality) {
+    return new Promise(resolve => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(resolve, 'image/jpeg', quality);
+      };
+      img.src = url;
+    });
+  }
+
+  async function uploadToCloudinary(file, maxDim = 1200, quality = 0.85) {
+    const blob = await compressImage(file, maxDim, quality);
+    const fd = new FormData();
+    fd.append('file', blob, 'photo.jpg');
+    fd.append('upload_preset', CLOUDINARY_PRESET);
+    const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error('Upload failed');
+    return data.secure_url;
+  }
+
+  // ── Profile pictures ───────────────────────────────────────────────────────
+  async function handleProfilePicUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    const el = document.getElementById('header-avatar');
+    el.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px"></div>';
+    try {
+      const url = await uploadToCloudinary(file, 400, 0.85);
+      await Promise.all([
+        db.doc(`users/${activeUser}/profile/info`).set({ photoURL: url }, { merge: true }),
+        db.collection('usernames').doc(activeUser.toLowerCase()).set({ photoURL: url }, { merge: true })
+      ]);
+      profilePicCache[activeUser] = url;
+      setHeaderAvatar(url);
+    } catch (e) {
+      setHeaderAvatar(profilePicCache[activeUser] || null);
+      alert('Failed to upload profile picture. Try again.');
+    }
+  }
+
+  function setHeaderAvatar(url) {
+    const el = document.getElementById('header-avatar');
+    if (url) {
+      el.innerHTML = `<img src="${esc(url)}" alt="Profile" />`;
+    } else {
+      el.textContent = activeUser ? activeUser.charAt(0).toUpperCase() : '?';
+    }
+  }
+
+  async function loadProfilePic(username) {
+    if (profilePicCache[username] !== undefined) return profilePicCache[username];
+    try {
+      const doc = await db.collection('usernames').doc(username.toLowerCase()).get();
+      const url = doc.data()?.photoURL || null;
+      profilePicCache[username] = url;
+      return url;
+    } catch { profilePicCache[username] = null; return null; }
+  }
+
+  function avatarHTML(username, url, size = 36, clickable = true) {
+    const onclick = clickable ? `onclick="viewUserStats('${esc(username)}')"` : '';
+    const style = `width:${size}px;height:${size}px;border-radius:50%;background:var(--navy);color:#38bdf8;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${Math.round(size*0.35)}px;flex-shrink:0;overflow:hidden;${clickable ? 'cursor:pointer;' : ''}`;
+    const inner = url ? `<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="${esc(username)}" />` : esc(username.charAt(0).toUpperCase());
+    return `<div style="${style}" ${onclick}>${inner}</div>`;
+  }
+
+  // ── Catch photos ───────────────────────────────────────────────────────────
+  async function handleCatchPhoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('catch-photo-img').src = e.target.result;
+      document.getElementById('catch-photo-img').style.display = 'block';
+      document.getElementById('catch-photo-placeholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+
+    document.getElementById('catch-photo-status').textContent = 'Uploading…';
+    document.getElementById('catch-photo-remove').style.display = 'none';
+    pendingCatchPhotoURL = null;
+
+    try {
+      pendingCatchPhotoURL = await uploadToCloudinary(file, 1200, 0.85);
+      document.getElementById('catch-photo-status').textContent = 'Photo ready';
+      document.getElementById('catch-photo-remove').style.display = 'inline-flex';
+    } catch (e) {
+      document.getElementById('catch-photo-status').textContent = 'Upload failed — try again';
+      document.getElementById('catch-photo-img').style.display = 'none';
+      document.getElementById('catch-photo-placeholder').style.display = 'flex';
+    }
+  }
+
+  function removeCatchPhoto() {
+    pendingCatchPhotoURL = null;
+    document.getElementById('catch-photo-img').style.display = 'none';
+    document.getElementById('catch-photo-img').src = '';
+    document.getElementById('catch-photo-placeholder').style.display = 'flex';
+    document.getElementById('catch-photo-status').textContent = '';
+    document.getElementById('catch-photo-remove').style.display = 'none';
   }
 
   // ── Social / People ───────────────────────────────────────────────────────
@@ -2024,10 +2224,13 @@
       } catch { return { username: u, catches: 0, gear: 0, followers: 0, species: [] }; }
     }));
 
+    // Load profile pics for followed users
+    await Promise.all(followingList.map(u => loadProfilePic(u)));
+
     followingEl.innerHTML = stats.map(s => {
-      const following = followingList.includes(s.username);
+      const pic = profilePicCache[s.username] || null;
       return `<div class="user-card">
-        <div class="user-avatar">${esc(s.username.charAt(0).toUpperCase())}</div>
+        ${avatarHTML(s.username, pic, 42)}
         <div class="user-info">
           <div class="user-name">${esc(s.username)}</div>
           <div class="user-meta">${s.catches} catch${s.catches !== 1 ? 'es' : ''} &bull; ${s.gear} gear &bull; ${s.followers} follower${s.followers !== 1 ? 's' : ''}${s.species.length ? '<br>' + s.species.slice(0,3).join(', ') : ''}</div>
@@ -2043,8 +2246,9 @@
   function userCardHTML(username, isSearchResult) {
     const isFollowing = followingList.includes(username);
     const isSelf = username.toLowerCase() === activeUser.toLowerCase();
+    const pic = profilePicCache[username] || null;
     return `<div class="user-card">
-      <div class="user-avatar">${esc(username.charAt(0).toUpperCase())}</div>
+      ${avatarHTML(username, pic, 42, !isSelf)}
       <div class="user-info">
         <div class="user-name">${esc(username)}</div>
         <div class="user-meta">${isFollowing ? 'Following' : isSelf ? 'You' : 'Angler'}</div>
@@ -2063,6 +2267,7 @@
     document.getElementById('user-stats-overlay').classList.add('open');
 
     try {
+      await loadProfilePic(username);
       const [gearSnap, catchSnap, followerSnap, followingSnap] = await Promise.all([
         db.collection(`users/${username}/gear`).get(),
         db.collection(`users/${username}/catches`).get(),
@@ -2091,7 +2296,7 @@
 
       document.getElementById('user-stats-body').innerHTML = `
         <div class="user-stats-header-card">
-          <div class="user-stats-avatar">${esc(username.charAt(0).toUpperCase())}</div>
+          ${avatarHTML(username, profilePicCache[username] || null, 52, false)}
           <div>
             <div class="user-stats-name">${esc(username)}</div>
             <div class="user-stats-sub">${followerCount} follower${followerCount !== 1 ? 's' : ''} &bull; ${followingCount} following</div>
@@ -2206,26 +2411,31 @@
         return;
       }
 
+      // Load profile pics for all authors in parallel
+      const uniqueAuthors = [...new Set(allCatches.map(c => c._author))];
+      await Promise.all(uniqueAuthors.map(u => loadProfilePic(u)));
+
       el.innerHTML = allCatches.map(c => {
         const author = c._author;
+        const picUrl = profilePicCache[author] || null;
         const details = [
-          c.weight  ? `<span class="feed-weight">${c.weight} ${esc(c.weightUnit || 'lb')}</span>` : null,
-          c.length  ? `${c.length} ${esc(c.lengthUnit || 'in')}` : null,
+          c.weight   ? `<span class="feed-weight">${c.weight} ${esc(c.weightUnit || 'lb')}</span>` : null,
+          c.length   ? `${c.length} ${esc(c.lengthUnit || 'in')}` : null,
           c.location ? `📍 ${esc(c.location)}` : null,
-          c.water   ? waterLabel(c.water) : null,
-          c.weather ? weatherLabel(c.weather) : null,
-          c.clarity ? clarityLabel(c.clarity) : null,
+          c.weather  ? weatherLabel(c.weather) : null,
+          c.clarity  ? clarityLabel(c.clarity) : null,
         ].filter(Boolean).join(' &bull; ');
 
         return `<div class="feed-card">
           <div class="feed-header">
-            <div class="feed-avatar" onclick="viewUserStats('${esc(author)}')">${esc(author.charAt(0).toUpperCase())}</div>
-            <div>
+            ${avatarHTML(author, picUrl, 36)}
+            <div style="flex:1;min-width:0">
               <div class="feed-username" onclick="viewUserStats('${esc(author)}')">${esc(author)}</div>
               <div style="font-size:0.72rem;color:var(--muted)">${fmtDate(c.date)}</div>
             </div>
             <div class="feed-time">${timeAgo(c.date)}</div>
           </div>
+          ${c.photoURL ? `<img src="${esc(c.photoURL)}" class="feed-photo" alt="${esc(c.species)}" />` : ''}
           <div class="feed-body">
             <div class="feed-species">🐟 ${esc(c.species)}</div>
             ${details ? `<div class="feed-detail">${details}</div>` : ''}
