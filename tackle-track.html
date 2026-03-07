@@ -415,6 +415,67 @@
     .gear-pick-sub { font-size: 0.73rem; color: var(--muted); }
     .gear-picker-empty { padding: 20px; text-align: center; font-size: 0.83rem; color: var(--muted); }
 
+    /* ── People view ── */
+    .people-search-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .people-search-row input { flex: 1; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.9rem; font-family: inherit; outline: none; background: var(--surface); color: var(--text); }
+    .people-search-row input:focus { border-color: var(--accent); }
+    .user-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-avatar {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-weight: 700; font-size: 0.95rem; }
+    .user-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .user-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-follow { background: var(--accent); color: white; }
+    .btn-follow:hover { background: var(--accent-dark); }
+    .btn-unfollow { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+    .btn-unfollow:hover { background: var(--bg); color: var(--danger); border-color: var(--danger); }
+
+    /* ── User stats overlay ── */
+    #user-stats-overlay .modal { max-height: 92vh; }
+    .user-stats-header-card {
+      background: var(--navy);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .user-stats-avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: #1e293b;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .user-stats-name { font-size: 1.1rem; font-weight: 800; color: white; }
+    .user-stats-sub { font-size: 0.78rem; color: #64748b; margin-top: 2px; }
+
     /* ── Loading overlay ── */
     #loading-overlay {
       position: fixed;
@@ -673,6 +734,20 @@
   <div id="view-stats" class="view">
     <div id="stats-content"></div>
   </div>
+
+  <!-- ── People ── -->
+  <div id="view-people" class="view">
+    <div class="people-search-row">
+      <input type="text" id="people-search" placeholder="Search by username..." autocomplete="off" autocapitalize="none" />
+      <button class="btn btn-primary" onclick="searchUsers()">Search</button>
+    </div>
+    <div id="people-search-results"></div>
+    <div class="sec-header" style="margin-top:4px">
+      <span class="sec-title">Following</span>
+      <span id="following-count" style="font-size:0.82rem;color:var(--muted)"></span>
+    </div>
+    <div id="following-list"></div>
+  </div>
 </main>
 
 <button class="fab hidden" id="fab" onclick="openFab()">+</button>
@@ -705,6 +780,13 @@
       <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
     </svg>
     Stats
+  </button>
+  <button onclick="showView('people')" id="nav-people">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    People
   </button>
 </nav>
 
@@ -953,6 +1035,20 @@
   </div>
 </div>
 
+<!-- ── User stats overlay ── -->
+<div class="overlay" id="user-stats-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="user-stats-title"></h2>
+      <button class="modal-close" onclick="closeUserStats()">&times;</button>
+    </div>
+    <div class="modal-body" id="user-stats-body">
+      <div class="empty"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Map overlay ── -->
 <div id="map-overlay">
   <div id="map-top-bar">
@@ -993,6 +1089,8 @@
   let consumableOn = false;
   let pendingLat = null;
   let pendingLng = null;
+  let followingList = [];
+  let peopleSearchResults = [];
 
   // ── Map state ─────────────────────────────────────────────────────────────
   let mapInstance  = null;
@@ -1064,6 +1162,8 @@
 
     document.getElementById('loading-overlay').classList.add('hidden');
     renderDashboard();
+    registerProfile();
+    loadFollowing();
   }
 
   function loginUser() {
@@ -1171,6 +1271,7 @@
     if (v === 'gear')      renderGear();
     if (v === 'catches')   renderCatches();
     if (v === 'stats')     renderStats();
+    if (v === 'people')    renderPeopleView();
   }
 
   function openFab() {
@@ -1759,6 +1860,227 @@
     if (inp) inp.classList.remove('err');
   }
 
+  // ── Social / People ───────────────────────────────────────────────────────
+  function registerProfile() {
+    db.collection('usernames').doc(activeUser.toLowerCase()).set({
+      username: activeUser,
+      usernameLower: activeUser.toLowerCase(),
+      joinedAt: new Date().toISOString()
+    }, { merge: true }).catch(console.error);
+  }
+
+  async function loadFollowing() {
+    try {
+      const snap = await db.collection(`users/${activeUser}/following`).get();
+      followingList = snap.docs.map(d => d.id);
+    } catch (e) { followingList = []; }
+  }
+
+  async function followUser(username) {
+    const now = new Date().toISOString();
+    const batch = db.batch();
+    batch.set(db.doc(`users/${activeUser}/following/${username}`), { followedAt: now });
+    batch.set(db.doc(`users/${username}/followers/${activeUser}`), { followedAt: now });
+    await batch.commit();
+    if (!followingList.includes(username)) followingList.push(username);
+    renderPeopleView();
+    renderSearchResults(peopleSearchResults);
+  }
+
+  async function unfollowUser(username) {
+    const batch = db.batch();
+    batch.delete(db.doc(`users/${activeUser}/following/${username}`));
+    batch.delete(db.doc(`users/${username}/followers/${activeUser}`));
+    await batch.commit();
+    followingList = followingList.filter(u => u !== username);
+    renderPeopleView();
+    renderSearchResults(peopleSearchResults);
+  }
+
+  async function searchUsers() {
+    const query = document.getElementById('people-search').value.trim().toLowerCase();
+    const resultsEl = document.getElementById('people-search-results');
+    if (!query) { resultsEl.innerHTML = ''; peopleSearchResults = []; return; }
+    resultsEl.innerHTML = `<div style="color:var(--muted);font-size:0.83rem;padding:8px 0">Searching…</div>`;
+    try {
+      const snap = await db.collection('usernames')
+        .where('usernameLower', '>=', query)
+        .where('usernameLower', '<=', query + '\uf8ff')
+        .limit(10).get();
+      peopleSearchResults = snap.docs.map(d => d.data().username).filter(u => u.toLowerCase() !== activeUser.toLowerCase());
+      renderSearchResults(peopleSearchResults);
+    } catch (e) {
+      resultsEl.innerHTML = `<div style="color:var(--danger);font-size:0.83rem;padding:8px 0">Search failed. Try again.</div>`;
+    }
+  }
+
+  function renderSearchResults(users) {
+    const el = document.getElementById('people-search-results');
+    if (!users || users.length === 0) {
+      const query = document.getElementById('people-search').value.trim();
+      el.innerHTML = query ? `<div style="color:var(--muted);font-size:0.83rem;padding:8px 0">No users found for "${esc(query)}".</div>` : '';
+      return;
+    }
+    el.innerHTML = `<div style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Results</div>` +
+      users.map(u => userCardHTML(u, true)).join('') +
+      `<div class="divider"></div>`;
+  }
+
+  async function renderPeopleView() {
+    const followingEl = document.getElementById('following-list');
+    const countEl     = document.getElementById('following-count');
+    countEl.textContent = followingList.length ? `${followingList.length} user${followingList.length !== 1 ? 's' : ''}` : '';
+
+    if (followingList.length === 0) {
+      followingEl.innerHTML = `<div class="empty"><div class="icon">🎣</div><strong>Not following anyone yet</strong><p>Search for anglers by username above.</p></div>`;
+      return;
+    }
+
+    followingEl.innerHTML = `<div style="color:var(--muted);font-size:0.83rem;padding:8px 0">Loading…</div>`;
+
+    // Load catch counts for each followed user
+    const stats = await Promise.all(followingList.map(async u => {
+      try {
+        const [cs, gs, fs] = await Promise.all([
+          db.collection(`users/${u}/catches`).get(),
+          db.collection(`users/${u}/gear`).get(),
+          db.collection(`users/${u}/followers`).get()
+        ]);
+        const catchDocs = cs.docs.map(d => d.data());
+        const species = [...new Set(catchDocs.map(c => c.species).filter(Boolean))];
+        return { username: u, catches: cs.size, gear: gs.size, followers: fs.size, species };
+      } catch { return { username: u, catches: 0, gear: 0, followers: 0, species: [] }; }
+    }));
+
+    followingEl.innerHTML = stats.map(s => {
+      const following = followingList.includes(s.username);
+      return `<div class="user-card">
+        <div class="user-avatar">${esc(s.username.charAt(0).toUpperCase())}</div>
+        <div class="user-info">
+          <div class="user-name">${esc(s.username)}</div>
+          <div class="user-meta">${s.catches} catch${s.catches !== 1 ? 'es' : ''} &bull; ${s.gear} gear &bull; ${s.followers} follower${s.followers !== 1 ? 's' : ''}${s.species.length ? '<br>' + s.species.slice(0,3).join(', ') : ''}</div>
+        </div>
+        <div class="user-actions">
+          <button class="btn btn-ghost btn-sm" onclick="viewUserStats('${esc(s.username)}')">Stats</button>
+          <button class="btn btn-sm btn-unfollow" onclick="unfollowUser('${esc(s.username)}')">Unfollow</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function userCardHTML(username, isSearchResult) {
+    const isFollowing = followingList.includes(username);
+    const isSelf = username.toLowerCase() === activeUser.toLowerCase();
+    return `<div class="user-card">
+      <div class="user-avatar">${esc(username.charAt(0).toUpperCase())}</div>
+      <div class="user-info">
+        <div class="user-name">${esc(username)}</div>
+        <div class="user-meta">${isFollowing ? 'Following' : isSelf ? 'You' : 'Angler'}</div>
+      </div>
+      <div class="user-actions">
+        ${!isSelf ? `<button class="btn btn-ghost btn-sm" onclick="viewUserStats('${esc(username)}')">Stats</button>` : ''}
+        ${!isSelf && !isFollowing ? `<button class="btn btn-sm btn-follow" onclick="followUser('${esc(username)}')">Follow</button>` : ''}
+        ${!isSelf && isFollowing  ? `<button class="btn btn-sm btn-unfollow" onclick="unfollowUser('${esc(username)}')">Unfollow</button>` : ''}
+      </div>
+    </div>`;
+  }
+
+  async function viewUserStats(username) {
+    document.getElementById('user-stats-title').textContent = username;
+    document.getElementById('user-stats-body').innerHTML = `<div class="empty"><div class="spinner"></div></div>`;
+    document.getElementById('user-stats-overlay').classList.add('open');
+
+    try {
+      const [gearSnap, catchSnap, followerSnap, followingSnap] = await Promise.all([
+        db.collection(`users/${username}/gear`).get(),
+        db.collection(`users/${username}/catches`).get(),
+        db.collection(`users/${username}/followers`).get(),
+        db.collection(`users/${username}/following`).get()
+      ]);
+
+      const uGear    = gearSnap.docs.map(d => d.data());
+      const uCatches = catchSnap.docs.map(d => d.data());
+      const followerCount  = followerSnap.size;
+      const followingCount = followingSnap.size;
+
+      const speciesMap = {};
+      uCatches.forEach(c => { if (c.species) speciesMap[c.species] = (speciesMap[c.species] || 0) + 1; });
+      const speciesList = Object.entries(speciesMap).sort((a,b) => b[1]-a[1]);
+
+      const gearPerf = uGear.map(g => {
+        const count = uCatches.filter(c => c.gearIds && c.gearIds.includes(g.id)).length;
+        return { g, count };
+      }).filter(x => x.count > 0).sort((a,b) => b.count - a.count);
+
+      const biggest = [...uCatches].filter(c => c.weight > 0).sort((a,b) => b.weight - a.weight).slice(0,3);
+      const maxSp   = speciesList[0]?.[1] || 1;
+      const maxGear = gearPerf[0]?.count || 1;
+      const isFollowing = followingList.includes(username);
+
+      document.getElementById('user-stats-body').innerHTML = `
+        <div class="user-stats-header-card">
+          <div class="user-stats-avatar">${esc(username.charAt(0).toUpperCase())}</div>
+          <div>
+            <div class="user-stats-name">${esc(username)}</div>
+            <div class="user-stats-sub">${followerCount} follower${followerCount !== 1 ? 's' : ''} &bull; ${followingCount} following</div>
+          </div>
+          <div style="margin-left:auto">
+            ${isFollowing
+              ? `<button class="btn btn-sm btn-unfollow" onclick="unfollowUser('${esc(username)}');closeUserStats()">Unfollow</button>`
+              : `<button class="btn btn-sm btn-follow" onclick="followUser('${esc(username)}')">Follow</button>`}
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card"><div class="val">${uCatches.length}</div><div class="lbl">Catches</div></div>
+          <div class="stat-card"><div class="val">${speciesList.length}</div><div class="lbl">Species</div></div>
+          <div class="stat-card"><div class="val">${uGear.length}</div><div class="lbl">Gear Items</div></div>
+          <div class="stat-card"><div class="val">${uCatches.filter(c=>c.water==='fresh').length}</div><div class="lbl">Freshwater</div></div>
+        </div>
+
+        ${speciesList.length > 0 ? `
+        <div class="card">
+          <div class="sec-header"><span class="sec-title">Top Species</span></div>
+          ${speciesList.slice(0,5).map(([sp, count]) => `
+            <div class="perf-row">
+              <div class="perf-header"><span class="perf-label">${esc(sp)}</span><span class="perf-val">${count} catch${count!==1?'es':''}</span></div>
+              <div class="bar-bg"><div class="bar-fill green" style="width:${Math.round((count/maxSp)*100)}%"></div></div>
+            </div>`).join('')}
+        </div>` : ''}
+
+        ${gearPerf.length > 0 ? `
+        <div class="card">
+          <div class="sec-header"><span class="sec-title">Top Gear</span></div>
+          ${gearPerf.slice(0,5).map(({g, count}) => `
+            <div class="perf-row">
+              <div class="perf-header"><span class="perf-label">${esc(g.name)}</span><span class="perf-val">${count} catch${count!==1?'es':''}</span></div>
+              <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((count/maxGear)*100)}%"></div></div>
+            </div>`).join('')}
+        </div>` : ''}
+
+        ${biggest.length > 0 ? `
+        <div class="card">
+          <div class="sec-header"><span class="sec-title">Biggest Catches</span></div>
+          ${biggest.map((c, i) => `
+            <div class="catch-row">
+              <div class="catch-icon">${['🥇','🥈','🥉'][i]}</div>
+              <div class="catch-info">
+                <div class="catch-name">${esc(c.species)}</div>
+                <div class="catch-meta">${fmtDate(c.date)}${c.location ? ' &bull; ' + esc(c.location) : ''}</div>
+              </div>
+              <div class="catch-weight">${c.weight} ${esc(c.weightUnit||'lb')}</div>
+            </div>`).join('')}
+        </div>` : ''}
+      `;
+    } catch (e) {
+      document.getElementById('user-stats-body').innerHTML = `<div class="empty"><strong>Failed to load stats</strong><p>Try again.</p></div>`;
+    }
+  }
+
+  function closeUserStats() {
+    document.getElementById('user-stats-overlay').classList.remove('open');
+  }
+
   // ── Use current location (no map needed) ─────────────────────────────────
   function useCurrentLocation() {
     if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
@@ -1907,6 +2229,14 @@
   });
   document.getElementById('confirm-overlay').addEventListener('keydown', e => {
     if (e.key === 'Escape') closeConfirm();
+  });
+
+  document.getElementById('people-search').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchUsers();
+  });
+
+  document.getElementById('user-stats-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeUserStats();
   });
 
   // Close overlays on backdrop click
