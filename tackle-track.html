@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>TackleTrack</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #0891b2;
+      --accent-dark: #0e7490;
+      --accent-light: #e0f2fe;
+      --navy: #0f172a;
+      --navy2: #1e293b;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --warn-bg: #fef3c7;
+      --warn-border: #f59e0b;
+      --warn-text: #92400e;
+      --success: #16a34a;
+      --header-h: 56px;
+      --nav-h: 64px;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: calc(var(--nav-h) + 16px);
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--navy);
+      color: white;
+      height: var(--header-h);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .logo { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; color: white; }
+    .logo span { color: #38bdf8; }
+
+    /* ── Bottom Nav ── */
+    nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: var(--navy);
+      display: flex;
+      z-index: 20;
+      border-top: 1px solid var(--navy2);
+    }
+    nav button {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #475569;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      transition: color 0.15s;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    nav button svg { width: 22px; height: 22px; stroke-width: 1.8; }
+    nav button.active { color: #38bdf8; }
+
+    /* ── Main ── */
+    main { padding: 16px; max-width: 680px; margin: 0 auto; }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Section header ── */
+    .sec-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .sec-title { font-size: 1rem; font-weight: 700; }
+
+    /* ── Stats grid ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+    .stat-card .val { font-size: 2rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .stat-card .lbl { font-size: 0.7rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+    .stat-card .val.danger { color: var(--danger); }
+
+    /* ── Alert ── */
+    .alert {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 0.85rem;
+      color: var(--warn-text);
+    }
+    .alert strong { font-weight: 700; }
+    .alert ul { margin-top: 6px; padding-left: 16px; }
+    .alert li { margin-top: 4px; line-height: 1.4; }
+    .alert a { color: var(--warn-text); font-weight: 700; text-decoration: underline; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .card-name { font-weight: 700; font-size: 0.95rem; }
+    .card-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .card-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .card-actions { display: flex; gap: 6px; margin-top: 12px; justify-content: flex-end; }
+
+    /* ── Catch rows on dashboard ── */
+    .catch-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .catch-row:last-child { border-bottom: none; }
+    .catch-icon { font-size: 1.5rem; }
+    .catch-info { flex: 1; min-width: 0; }
+    .catch-name { font-weight: 700; font-size: 0.9rem; }
+    .catch-meta { font-size: 0.78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .catch-weight { font-weight: 700; font-size: 0.85rem; color: var(--accent); white-space: nowrap; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .bg-gray   { background: #e2e8f0; color: #475569; }
+    .bg-teal   { background: #cffafe; color: #0e7490; }
+    .bg-blue   { background: #dbeafe; color: #1d4ed8; }
+    .bg-green  { background: #dcfce7; color: #15803d; }
+    .bg-red    { background: #fee2e2; color: #dc2626; }
+    .bg-amber  { background: #fef3c7; color: #92400e; }
+    .bg-purple { background: #ede9fe; color: #7c3aed; }
+    .bg-navy   { background: var(--navy); color: white; }
+
+    /* ── Category chips ── */
+    .chips {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 14px;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+      -webkit-overflow-scrolling: touch;
+    }
+    .chips::-webkit-scrollbar { height: 3px; }
+    .chips::-webkit-scrollbar-track { background: transparent; }
+    .chips::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+    .chip {
+      flex: 1 0 auto;
+      min-width: max-content;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--muted);
+      white-space: nowrap;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chip.active { background: var(--navy); color: white; border-color: var(--navy); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: var(--danger-hover); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+    .btn-ghost:hover { background: var(--bg); color: var(--text); }
+    .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed;
+      bottom: calc(var(--nav-h) + 14px);
+      right: 16px;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      font-size: 1.6rem;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(8,145,178,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 15;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fab:hover { background: var(--accent-dark); transform: scale(1.05); }
+    .fab.hidden { display: none; }
+
+    /* ── Performance bars ── */
+    .perf-row { margin-bottom: 12px; }
+    .perf-header { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 5px; }
+    .perf-label { font-weight: 600; }
+    .perf-val { color: var(--muted); }
+    .bar-bg { background: #e2e8f0; border-radius: 999px; height: 8px; overflow: hidden; }
+    .bar-fill { background: var(--accent); height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+    .bar-fill.green { background: var(--success); }
+    .bar-fill.amber { background: #f59e0b; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 44px 20px; color: var(--muted); }
+    .empty .icon { font-size: 2.8rem; margin-bottom: 10px; }
+    .empty strong { display: block; font-size: 0.95rem; color: var(--text); margin-bottom: 4px; }
+    .empty p { font-size: 0.83rem; }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    /* ── Modal ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 50;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    @media (min-width: 640px) {
+      .overlay { align-items: center; }
+      .modal { border-radius: var(--radius) !important; max-height: 88vh; }
+    }
+    .modal {
+      background: var(--surface);
+      width: 100%;
+      max-width: 540px;
+      border-radius: 20px 20px 0 0;
+      max-height: 92vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .modal-handle { width: 40px; height: 4px; background: #e2e8f0; border-radius: 999px; margin: 12px auto 0; }
+    .modal-header { padding: 14px 18px 0; display: flex; align-items: center; justify-content: space-between; }
+    .modal-header h2 { font-size: 1rem; font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--muted); padding: 2px 8px; border-radius: 6px; font-family: inherit; }
+    .modal-close:hover { background: var(--bg); }
+    .modal-body { padding: 14px 18px; }
+    .modal-footer { padding: 8px 18px 20px; display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 14px; }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; min-width: 0; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 5px; color: var(--text); }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .form-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 34px;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--accent); }
+    .form-group input.err,
+    .form-group select.err { border-color: var(--danger); }
+    .form-group .hint { font-size: 0.73rem; color: var(--muted); margin-top: 3px; }
+    .form-group .err-msg { font-size: 0.73rem; color: var(--danger); margin-top: 3px; display: none; }
+    .form-group.has-err .err-msg { display: block; }
+
+    /* ── Toggle (consumable) ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      margin-bottom: 14px;
+    }
+    .toggle-label { font-size: 0.88rem; font-weight: 600; }
+    .toggle-sub { font-size: 0.75rem; color: var(--muted); }
+    .toggle-switch {
+      width: 40px;
+      height: 22px;
+      background: #cbd5e1;
+      border-radius: 999px;
+      position: relative;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-switch.on { background: var(--accent); }
+    .toggle-switch.on::after { transform: translateX(18px); }
+
+    /* ── Gear selector in catch modal ── */
+    .gear-picker {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .gear-picker-search {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      width: 100%;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      border-top: none;
+    }
+    .gear-picker-search:focus { border-color: var(--border); outline: none; }
+    .gear-picker-list { max-height: 180px; overflow-y: auto; }
+    .gear-pick-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+    .gear-pick-item:last-child { border-bottom: none; }
+    .gear-pick-item:hover { background: var(--bg); }
+    .gear-pick-item input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .gear-pick-label { font-size: 0.875rem; flex: 1; cursor: pointer; }
+    .gear-pick-sub { font-size: 0.73rem; color: var(--muted); }
+    .gear-picker-empty { padding: 20px; text-align: center; font-size: 0.83rem; color: var(--muted); }
+
+    /* ── Loading overlay ── */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 400;
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    #loading-overlay.hidden { display: none; }
+    #loading-overlay .load-logo { font-size: 1.6rem; font-weight: 800; color: white; letter-spacing: -0.02em; }
+    #loading-overlay .load-logo span { color: #38bdf8; }
+    #loading-overlay p { font-size: 0.82rem; color: #475569; }
+    .spinner {
+      width: 34px; height: 34px;
+      border: 3px solid #1e293b;
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Login screen ── */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #login-screen.hidden { display: none; }
+    .login-box {
+      background: var(--navy2);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .login-logo { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; color: white; text-align: center; margin-bottom: 4px; }
+    .login-logo span { color: #38bdf8; }
+    .login-tagline { text-align: center; font-size: 0.82rem; color: #64748b; margin-bottom: 28px; }
+    .login-label { font-size: 0.8rem; font-weight: 700; color: #94a3b8; margin-bottom: 6px; display: block; }
+    .login-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #0f172a;
+      border: 1.5px solid #334155;
+      border-radius: var(--radius-sm);
+      color: white;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .login-input:focus { border-color: #38bdf8; }
+    .login-input::placeholder { color: #475569; }
+    .login-btn {
+      width: 100%;
+      margin-top: 14px;
+      padding: 13px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .login-btn:hover { background: var(--accent-dark); }
+    .login-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 14px; }
+    .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: #334155; }
+    .login-divider span { font-size: 0.73rem; color: #475569; white-space: nowrap; }
+    .login-users { display: flex; flex-wrap: wrap; gap: 8px; }
+    .login-user-btn {
+      padding: 7px 14px;
+      background: #0f172a;
+      border: 1.5px solid #334155;
+      border-radius: 999px;
+      color: #94a3b8;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .login-user-btn:hover { border-color: #38bdf8; color: white; }
+
+    /* ── Header user chip ── */
+    .header-user {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-username {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #94a3b8;
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .header-switch {
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid #334155;
+      border-radius: 999px;
+      color: #64748b;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .header-switch:hover { border-color: #94a3b8; color: #94a3b8; }
+
+    /* ── Map overlay ── */
+    #map-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      background: var(--navy);
+    }
+    #map-overlay.open { display: flex; }
+    #map-top-bar {
+      height: 52px;
+      background: var(--navy);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 10px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--navy2);
+    }
+    #map-top-bar span { font-size: 0.95rem; font-weight: 700; color: white; flex: 1; text-align: center; }
+    #map-el { flex: 1; min-height: 0; }
+    #map-hint {
+      background: rgba(15,23,42,0.75);
+      color: #94a3b8;
+      font-size: 0.78rem;
+      text-align: center;
+      padding: 6px;
+      flex-shrink: 0;
+    }
+    #map-bottom-bar {
+      background: var(--surface);
+      padding: 14px 16px 20px;
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+    }
+    #map-address-text {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #map-coords-text { font-size: 0.73rem; color: var(--muted); margin-top: 2px; min-height: 1em; }
+    #map-bottom-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+    .map-pin-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      cursor: pointer;
+      color: var(--accent);
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+    }
+    .map-pin-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+    .map-pin-btn svg { width: 20px; height: 20px; }
+    .loc-wrap { display: flex; gap: 6px; }
+    .loc-wrap input { flex: 1; min-width: 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── Loading overlay ── -->
+<div id="loading-overlay" class="hidden">
+  <div class="load-logo">Tackle<span>Track</span></div>
+  <div class="spinner"></div>
+  <p>Loading your data…</p>
+</div>
+
+<!-- ── Login screen ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Tackle<span>Track</span></div>
+    <div class="login-tagline">Your fishing gear &amp; catch companion</div>
+    <label class="login-label" for="login-input">Enter your username</label>
+    <input class="login-input" id="login-input" type="text" placeholder="e.g. John" autocomplete="off" autocapitalize="words" maxlength="32" />
+    <button class="login-btn" onclick="loginUser()">Start Fishing</button>
+    <div id="login-existing-wrap" style="display:none">
+      <div class="login-divider"><span>or continue as</span></div>
+      <div class="login-users" id="login-users-list"></div>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">Tackle<span>Track</span></div>
+  <div class="header-user">
+    <span class="header-username" id="header-username"></span>
+    <button class="header-switch" onclick="switchUser()">Switch</button>
+  </div>
+</header>
+
+<main>
+  <!-- ── Dashboard ── -->
+  <div id="view-dashboard" class="view active">
+    <div class="stats-grid" id="dash-stats"></div>
+    <div id="dash-alert"></div>
+    <div class="sec-header">
+      <span class="sec-title">Recent Catches</span>
+      <button class="btn btn-ghost btn-sm" onclick="showView('catches')">View all</button>
+    </div>
+    <div class="card" id="dash-catches"></div>
+    <div class="divider"></div>
+    <div class="sec-header">
+      <span class="sec-title">Top Performing Gear</span>
+      <button class="btn btn-ghost btn-sm" onclick="showView('stats')">Full stats</button>
+    </div>
+    <div class="card" id="dash-top-gear"></div>
+  </div>
+
+  <!-- ── Gear ── -->
+  <div id="view-gear" class="view">
+    <div class="chips" id="gear-chips"></div>
+    <div id="gear-list"></div>
+  </div>
+
+  <!-- ── Catches ── -->
+  <div id="view-catches" class="view">
+    <div class="chips" id="catch-chips"></div>
+    <div id="catch-list"></div>
+  </div>
+
+  <!-- ── Stats ── -->
+  <div id="view-stats" class="view">
+    <div id="stats-content"></div>
+  </div>
+</main>
+
+<button class="fab hidden" id="fab" onclick="openFab()">+</button>
+
+<!-- ── Bottom Nav ── -->
+<nav>
+  <button onclick="showView('dashboard')" id="nav-dashboard" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+    Dashboard
+  </button>
+  <button onclick="showView('gear')" id="nav-gear">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </svg>
+    Gear
+  </button>
+  <button onclick="showView('catches')" id="nav-catches">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 16.5C18 19 15.5 21 12 21s-6-2-6-4.5c0-1.93 1.5-3.5 3.5-4.5L12 4l2.5 8c2 1 3.5 2.57 3.5 4.5z"/>
+      <path d="M12 4C10 6 8 8.5 8 11"/><path d="M12 4c2 2 4 4.5 4 7"/>
+    </svg>
+    Catches
+  </button>
+  <button onclick="showView('stats')" id="nav-stats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+    </svg>
+    Stats
+  </button>
+</nav>
+
+<!-- ── Gear Modal ── -->
+<div class="overlay" id="gear-overlay">
+  <div class="modal" id="gear-modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="gear-modal-title">Add Gear</h2>
+      <button class="modal-close" onclick="closeGearModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" id="fg-gname">
+        <label for="g-name">Item Name *</label>
+        <input type="text" id="g-name" placeholder="e.g. Rapala X-Rap" />
+        <div class="err-msg">Name is required.</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="g-brand">Brand</label>
+          <input type="text" id="g-brand" placeholder="e.g. Rapala" />
+        </div>
+        <div class="form-group">
+          <label for="g-category">Category *</label>
+          <select id="g-category">
+            <option value="lure">Lure</option>
+            <option value="rod">Rod</option>
+            <option value="reel">Reel</option>
+            <option value="hook">Hook</option>
+            <option value="line">Line</option>
+            <option value="leader">Leader</option>
+            <option value="weight">Weight / Sinker</option>
+            <option value="bait">Bait</option>
+            <option value="accessory">Accessory</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="g-water">Water Type</label>
+          <select id="g-water">
+            <option value="both">Fresh &amp; Salt</option>
+            <option value="fresh">Freshwater</option>
+            <option value="salt">Saltwater</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="g-condition">Condition</label>
+          <select id="g-condition">
+            <option value="new">New</option>
+            <option value="good">Good</option>
+            <option value="worn">Worn</option>
+            <option value="repair">Needs Repair</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="g-species">Target Species</label>
+        <input type="text" id="g-species" placeholder="e.g. Bass, Redfish, Trout" />
+        <div class="hint">Comma-separated list of target species.</div>
+      </div>
+
+      <div class="toggle-row" onclick="toggleConsumable()" id="consumable-toggle">
+        <div>
+          <div class="toggle-label">Consumable Item</div>
+          <div class="toggle-sub">Track quantity &amp; get low stock alerts</div>
+        </div>
+        <div class="toggle-switch" id="consumable-switch"></div>
+      </div>
+
+      <div id="consumable-fields" style="display:none">
+        <div class="form-row">
+          <div class="form-group" id="fg-gqty">
+            <label for="g-qty">Quantity *</label>
+            <input type="number" id="g-qty" min="0" placeholder="0" />
+            <div class="err-msg">Enter a valid quantity.</div>
+          </div>
+          <div class="form-group">
+            <label for="g-unit">Unit</label>
+            <input type="text" id="g-unit" placeholder="e.g. pcs, yd, oz" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="g-threshold">Low Stock Threshold</label>
+          <input type="number" id="g-threshold" min="0" placeholder="e.g. 5" />
+          <div class="hint">Alert when quantity falls at or below this number.</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="g-price">Price Paid ($)</label>
+          <input type="number" id="g-price" min="0" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label for="g-date">Date Purchased</label>
+          <input type="date" id="g-date" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="g-link">Buy / Reorder Link</label>
+        <input type="url" id="g-link" placeholder="https://..." />
+      </div>
+      <div class="form-group">
+        <label for="g-notes">Notes</label>
+        <input type="text" id="g-notes" placeholder="Optional notes" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeGearModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGear()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Catch Modal ── -->
+<div class="overlay" id="catch-overlay">
+  <div class="modal" id="catch-modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="catch-modal-title">Log Catch</h2>
+      <button class="modal-close" onclick="closeCatchModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group" id="fg-cspecies">
+          <label for="c-species">Species *</label>
+          <input type="text" id="c-species" placeholder="e.g. Largemouth Bass" list="species-list" />
+          <datalist id="species-list"></datalist>
+          <div class="err-msg">Species is required.</div>
+        </div>
+        <div class="form-group">
+          <label for="c-water">Water Type</label>
+          <select id="c-water">
+            <option value="fresh">Freshwater</option>
+            <option value="salt">Saltwater</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" id="fg-cdate">
+          <label for="c-date">Date *</label>
+          <input type="date" id="c-date" />
+          <div class="err-msg">Date is required.</div>
+        </div>
+        <div class="form-group">
+          <label for="c-location">Location</label>
+          <div class="loc-wrap">
+            <input type="text" id="c-location" placeholder="e.g. Lake Erie" />
+            <button type="button" class="map-pin-btn" onclick="openMapPicker()" title="Pick on map">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="c-weight">Weight</label>
+          <input type="number" id="c-weight" min="0" step="0.01" placeholder="0.0" />
+        </div>
+        <div class="form-group">
+          <label for="c-weight-unit">Unit</label>
+          <select id="c-weight-unit">
+            <option value="lb">lb</option>
+            <option value="kg">kg</option>
+            <option value="oz">oz</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="c-length">Length</label>
+          <input type="number" id="c-length" min="0" step="0.1" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label for="c-length-unit">Unit</label>
+          <select id="c-length-unit">
+            <option value="in">in</option>
+            <option value="cm">cm</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="c-weather">Weather</label>
+          <select id="c-weather">
+            <option value="">— Select —</option>
+            <option value="sunny">Sunny</option>
+            <option value="partly-cloudy">Partly Cloudy</option>
+            <option value="overcast">Overcast</option>
+            <option value="rainy">Rainy</option>
+            <option value="windy">Windy</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="c-clarity">Water Clarity</label>
+          <select id="c-clarity">
+            <option value="">— Select —</option>
+            <option value="clear">Clear</option>
+            <option value="stained">Stained</option>
+            <option value="murky">Murky</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Gear Used</label>
+        <div class="gear-picker">
+          <input type="text" class="gear-picker-search" id="gear-search" placeholder="Search gear..." oninput="filterGearPicker()" />
+          <div class="gear-picker-list" id="gear-picker-list"></div>
+        </div>
+        <div class="hint">Select the lure, bait, or tackle used for this catch.</div>
+      </div>
+      <div class="form-group">
+        <label for="c-notes">Notes</label>
+        <input type="text" id="c-notes" placeholder="Any extra details..." />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCatchModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCatch()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Confirm Modal ── -->
+<div class="overlay" id="confirm-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="confirm-title">Delete Item</h2>
+      <button class="modal-close" onclick="closeConfirm()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.9rem;color:var(--muted)">Are you sure you want to delete <strong id="confirm-name" style="color:var(--text)"></strong>? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Map overlay ── -->
+<div id="map-overlay">
+  <div id="map-top-bar">
+    <button class="btn btn-ghost btn-sm" style="color:#94a3b8;border-color:#334155" onclick="closeMapPicker()">&#8592; Back</button>
+    <span>Pick Location</span>
+    <button class="btn btn-ghost btn-sm" style="color:#94a3b8;border-color:#334155" onclick="locateMe()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      My Location
+    </button>
+  </div>
+  <div id="map-hint">Tap anywhere on the map to drop a pin</div>
+  <div id="map-el"></div>
+  <div id="map-bottom-bar">
+    <div id="map-address-text" style="color:var(--muted)">Tap the map to place a pin</div>
+    <div id="map-coords-text"></div>
+    <div id="map-bottom-actions">
+      <button class="btn btn-ghost" onclick="closeMapPicker()">Cancel</button>
+      <button class="btn btn-primary" id="map-use-btn" onclick="confirmMapLocation()" disabled>Use This Location</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // ── State ─────────────────────────────────────────────────────────────────
+  let gear = [];
+  let catches = [];
+  let currentView = 'dashboard';
+  let gearCatFilter = 'all';
+  let catchSpeciesFilter = 'all';
+  let catchWaterFilter = 'all';
+  let editingGearId = null;
+  let editingCatchId = null;
+  let deletingType = null;
+  let deletingId = null;
+  let consumableOn = false;
+  let pendingLat = null;
+  let pendingLng = null;
+
+  // ── Map state ─────────────────────────────────────────────────────────────
+  let mapInstance  = null;
+  let mapMarker    = null;
+  let mapPickedLat = null;
+  let mapPickedLng = null;
+  let mapPickedAddress = null;
+
+  const USERS_KEY  = 'tt_users';
+  const ACTIVE_KEY = 'tt_active';
+  let activeUser   = null;
+
+  // ── Firebase ──────────────────────────────────────────────────────────────
+  // Paste your Firebase config here after creating a project at console.firebase.google.com
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyAWnT_GSqE3v9brj7tBU7ccuBWScB3Gz9c",
+    authDomain:        "tackletrack-7bc00.firebaseapp.com",
+    projectId:         "tackletrack-7bc00",
+    storageBucket:     "tackletrack-7bc00.firebasestorage.app",
+    messagingSenderId: "450464320889",
+    appId:             "1:450464320889:web:cc54e6f75b88db1d16b3a8"
+  };
+
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.firestore();
+  // Enable offline persistence so the app works without internet
+  db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
+  function gearCol()   { return db.collection(`users/${activeUser}/gear`); }
+  function catchCol()  { return db.collection(`users/${activeUser}/catches`); }
+
+  // ── Persistence ───────────────────────────────────────────────────────────
+  async function loadData() {
+    const [gs, cs] = await Promise.all([ gearCol().get(), catchCol().get() ]);
+    gear    = gs.docs.map(d => d.data());
+    catches = cs.docs.map(d => d.data());
+  }
+
+  function syncGear(item)   { gearCol().doc(item.id).set(item).catch(console.error); }
+  function syncCatch(item)  { catchCol().doc(item.id).set(item).catch(console.error); }
+  function removeGear(id)   { gearCol().doc(id).delete().catch(console.error); }
+  function removeCatch(id)  { catchCol().doc(id).delete().catch(console.error); }
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  function getUsers() {
+    try { return JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch { return []; }
+  }
+
+  async function startApp(username) {
+    activeUser = username;
+    localStorage.setItem(ACTIVE_KEY, username);
+
+    // Save to known users list
+    const users = getUsers();
+    if (!users.includes(username)) {
+      users.push(username);
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    }
+
+    document.getElementById('header-username').textContent = username;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('loading-overlay').classList.remove('hidden');
+
+    try {
+      await loadData();
+    } catch (e) {
+      console.error('Failed to load data:', e);
+    }
+
+    document.getElementById('loading-overlay').classList.add('hidden');
+    renderDashboard();
+  }
+
+  function loginUser() {
+    const input = document.getElementById('login-input');
+    const name  = input.value.trim();
+    if (!name) { input.focus(); return; }
+    startApp(name);
+  }
+
+  function switchUser() {
+    activeUser = null;
+    localStorage.removeItem(ACTIVE_KEY);
+    gear = []; catches = [];
+    document.getElementById('login-input').value = '';
+    renderLoginScreen();
+    document.getElementById('login-screen').classList.remove('hidden');
+    setTimeout(() => document.getElementById('login-input').focus(), 100);
+  }
+
+  function renderLoginScreen() {
+    const users = getUsers();
+    const wrap  = document.getElementById('login-existing-wrap');
+    const list  = document.getElementById('login-users-list');
+    if (users.length === 0) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    list.innerHTML = users.map(u =>
+      `<button class="login-user-btn" onclick="startApp('${esc(u)}')">${esc(u)}</button>`
+    ).join('');
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+  function esc(s) {
+    return String(s ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function isLow(g) {
+    return g.consumable && g.threshold > 0 && g.qty <= g.threshold;
+  }
+
+  function today() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function fmtDate(d) {
+    if (!d) return '';
+    const [y, m, day] = d.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[+m-1]} ${+day}, ${y}`;
+  }
+
+  function catLabel(c) {
+    return { lure:'Lure', rod:'Rod', reel:'Reel', hook:'Hook', line:'Line',
+      leader:'Leader', weight:'Weight', bait:'Bait', accessory:'Accessory', other:'Other' }[c] || c;
+  }
+
+  function catColor(c) {
+    return { lure:'bg-teal', rod:'bg-blue', reel:'bg-purple', hook:'bg-gray',
+      line:'bg-gray', leader:'bg-gray', weight:'bg-gray', bait:'bg-green',
+      accessory:'bg-amber', other:'bg-gray' }[c] || 'bg-gray';
+  }
+
+  function waterLabel(w) {
+    return { fresh:'Freshwater', salt:'Saltwater', both:'Fresh & Salt' }[w] || w;
+  }
+
+  function weatherLabel(w) {
+    return { sunny:'Sunny', 'partly-cloudy':'Partly Cloudy', overcast:'Overcast', rainy:'Rainy', windy:'Windy' }[w] || '';
+  }
+
+  function clarityLabel(c) {
+    return { clear:'Clear', stained:'Stained', murky:'Murky' }[c] || '';
+  }
+
+  function condLabel(c) {
+    return { new:'New', good:'Good', worn:'Worn', repair:'Needs Repair' }[c] || c;
+  }
+
+  function condColor(c) {
+    return { new:'bg-green', good:'bg-teal', worn:'bg-amber', repair:'bg-red' }[c] || 'bg-gray';
+  }
+
+  function getSpeciesList() {
+    return [...new Set(catches.map(c => c.species).filter(Boolean))].sort();
+  }
+
+  function getCatchesForGear(gearId) {
+    return catches.filter(c => c.gearIds && c.gearIds.includes(gearId));
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  function showView(v) {
+    currentView = v;
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-' + v).classList.add('active');
+    document.getElementById('nav-' + v).classList.add('active');
+
+    const fab = document.getElementById('fab');
+    fab.classList.toggle('hidden', v === 'dashboard' || v === 'stats');
+
+    if (v === 'dashboard') renderDashboard();
+    if (v === 'gear')      renderGear();
+    if (v === 'catches')   renderCatches();
+    if (v === 'stats')     renderStats();
+  }
+
+  function openFab() {
+    if (currentView === 'gear')    openGearModal();
+    if (currentView === 'catches') openCatchModal();
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  function renderDashboard() {
+    const lowStock = gear.filter(isLow);
+    const species = [...new Set(catches.map(c => c.species).filter(Boolean))];
+
+    // Stats
+    document.getElementById('dash-stats').innerHTML = `
+      <div class="stat-card"><div class="val">${gear.length}</div><div class="lbl">Gear Items</div></div>
+      <div class="stat-card"><div class="val">${catches.length}</div><div class="lbl">Total Catches</div></div>
+      <div class="stat-card"><div class="val">${species.length}</div><div class="lbl">Species Caught</div></div>
+      <div class="stat-card"><div class="val ${lowStock.length > 0 ? 'danger' : ''}">${lowStock.length}</div><div class="lbl">Low Stock</div></div>
+    `;
+
+    // Alert
+    const alertEl = document.getElementById('dash-alert');
+    if (lowStock.length > 0) {
+      alertEl.innerHTML = `<div class="alert"><strong>Low stock alert:</strong> ${lowStock.length} item${lowStock.length !== 1 ? 's are' : ' is'} running low.
+        <ul>${lowStock.map(g => `<li>${esc(g.name)} &mdash; ${g.qty} ${esc(g.unit || 'units')} remaining (threshold: ${g.threshold})${g.link ? ` <a href="${esc(g.link)}" target="_blank" rel="noopener noreferrer">Buy &rarr;</a>` : ''}</li>`).join('')}</ul></div>`;
+    } else {
+      alertEl.innerHTML = '';
+    }
+
+    // Recent catches
+    const recent = [...catches].sort((a,b) => (b.date||'').localeCompare(a.date||'')).slice(0, 5);
+    const catchEl = document.getElementById('dash-catches');
+    if (recent.length === 0) {
+      catchEl.innerHTML = `<div class="empty"><div class="icon">🎣</div><strong>No catches logged yet</strong><p>Head to Catches to log your first fish.</p></div>`;
+    } else {
+      catchEl.innerHTML = recent.map(c => {
+        const gearNames = (c.gearIds || []).map(id => gear.find(g => g.id === id)?.name).filter(Boolean);
+        return `<div class="catch-row">
+          <div class="catch-icon">🐟</div>
+          <div class="catch-info">
+            <div class="catch-name">${esc(c.species)}</div>
+            <div class="catch-meta">${fmtDate(c.date)}${c.location ? ' &bull; ' + esc(c.location) : ''}${gearNames.length ? ' &bull; ' + esc(gearNames[0]) : ''}</div>
+          </div>
+          ${c.weight ? `<div class="catch-weight">${c.weight} ${esc(c.weightUnit||'lb')}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    // Top gear
+    const topGearEl = document.getElementById('dash-top-gear');
+    const gearStats = gear.map(g => ({ g, count: getCatchesForGear(g.id).length }))
+      .filter(x => x.count > 0).sort((a,b) => b.count - a.count).slice(0, 5);
+    const max = gearStats[0]?.count || 1;
+    if (gearStats.length === 0) {
+      topGearEl.innerHTML = `<div class="empty"><div class="icon">📊</div><strong>No performance data yet</strong><p>Link gear to catches to track performance.</p></div>`;
+    } else {
+      topGearEl.innerHTML = gearStats.map(({ g, count }) => `
+        <div class="perf-row">
+          <div class="perf-header"><span class="perf-label">${esc(g.name)}</span><span class="perf-val">${count} catch${count !== 1 ? 'es' : ''}</span></div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((count/max)*100)}%"></div></div>
+        </div>`).join('');
+    }
+  }
+
+  // ── Gear View ─────────────────────────────────────────────────────────────
+  function renderGear() {
+    const cats = ['all', 'rod', 'reel', 'lure', 'hook', 'line', 'leader', 'weight', 'bait', 'accessory', 'consumables', 'other'];
+    const chipLabels = { all:'All', rod:'Rods', reel:'Reels', lure:'Lures', hook:'Hooks', line:'Line',
+      leader:'Leaders', weight:'Weights', bait:'Bait', accessory:'Accessories', consumables:'Consumables', other:'Other' };
+
+    document.getElementById('gear-chips').innerHTML = cats.map(c =>
+      `<button class="chip ${gearCatFilter === c ? 'active' : ''}" onclick="setGearFilter('${c}')">${chipLabels[c]}</button>`
+    ).join('');
+
+    let filtered = gear;
+    if (gearCatFilter === 'consumables') filtered = gear.filter(g => g.consumable);
+    else if (gearCatFilter !== 'all') filtered = gear.filter(g => g.category === gearCatFilter);
+
+    filtered = [...filtered].sort((a,b) => a.name.localeCompare(b.name));
+
+    const el = document.getElementById('gear-list');
+    if (filtered.length === 0) {
+      el.innerHTML = `<div class="empty"><div class="icon">🎣</div><strong>${gear.length === 0 ? 'No gear added yet' : 'No items in this category'}</strong><p>${gear.length === 0 ? 'Tap + to add your first item.' : 'Try a different filter.'}</p></div>`;
+      return;
+    }
+
+    el.innerHTML = filtered.map(g => {
+      const catchCount = getCatchesForGear(g.id).length;
+      const low = isLow(g);
+      return `<div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-name">${esc(g.name)}</div>
+            <div class="card-sub">${g.brand ? esc(g.brand) + ' &bull; ' : ''}${catLabel(g.category)}</div>
+          </div>
+          ${low ? `<span class="badge bg-red">Low Stock</span>` : ''}
+        </div>
+        <div class="card-badges">
+          <span class="badge ${catColor(g.category)}">${catLabel(g.category)}</span>
+          <span class="badge bg-gray">${waterLabel(g.water)}</span>
+          <span class="badge ${condColor(g.condition)}">${condLabel(g.condition)}</span>
+          ${g.consumable ? `<span class="badge ${low ? 'bg-red' : 'bg-green'}">${g.qty} ${g.unit || 'units'}${g.threshold > 0 ? ' / ' + g.threshold : ''}</span>` : ''}
+          ${catchCount > 0 ? `<span class="badge bg-teal">${catchCount} catch${catchCount !== 1 ? 'es' : ''}</span>` : ''}
+          ${g.species ? g.species.split(',').slice(0,2).map(s => `<span class="badge bg-gray">${esc(s.trim())}</span>`).join('') : ''}
+        </div>
+        ${g.notes ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:8px">${esc(g.notes)}</div>` : ''}
+        <div class="card-actions">
+          ${g.link ? `<a href="${esc(g.link)}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">Buy &rarr;</a>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="openGearModal('${g.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="openDeleteConfirm('gear','${g.id}','${esc(g.name)}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function setGearFilter(cat) {
+    gearCatFilter = cat;
+    renderGear();
+  }
+
+  // ── Catches View ──────────────────────────────────────────────────────────
+  function renderCatches() {
+    const species = ['all', ...getSpeciesList()];
+    const waters  = ['all', 'fresh', 'salt'];
+
+    document.getElementById('catch-chips').innerHTML =
+      species.map(s => `<button class="chip ${catchSpeciesFilter === s ? 'active' : ''}" onclick="setCatchFilter('species','${esc(s)}')">${s === 'all' ? 'All Species' : esc(s)}</button>`).join('') +
+      '<span style="width:1px;background:var(--border);flex-shrink:0;margin:4px 2px"></span>' +
+      waters.map(w => `<button class="chip ${catchWaterFilter === w ? 'active' : ''}" onclick="setCatchFilter('water','${w}')">${w === 'all' ? 'All Water' : waterLabel(w)}</button>`).join('');
+
+    let filtered = catches;
+    if (catchSpeciesFilter !== 'all') filtered = filtered.filter(c => c.species === catchSpeciesFilter);
+    if (catchWaterFilter   !== 'all') filtered = filtered.filter(c => c.water   === catchWaterFilter);
+    filtered = [...filtered].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+    const el = document.getElementById('catch-list');
+    if (filtered.length === 0) {
+      el.innerHTML = `<div class="empty"><div class="icon">🐟</div><strong>${catches.length === 0 ? 'No catches logged yet' : 'No results'}</strong><p>${catches.length === 0 ? 'Tap + to log your first catch.' : 'Try a different filter.'}</p></div>`;
+      return;
+    }
+
+    el.innerHTML = filtered.map(c => {
+      const gearNames = (c.gearIds || []).map(id => gear.find(g => g.id === id)?.name).filter(Boolean);
+      return `<div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-name">${esc(c.species)}</div>
+            <div class="card-sub">${fmtDate(c.date)}${c.location ? ' &bull; ' + esc(c.location) : ''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            ${c.weight ? `<div style="font-weight:800;color:var(--accent)">${c.weight} ${esc(c.weightUnit||'lb')}</div>` : ''}
+            ${c.length ? `<div style="font-size:0.78rem;color:var(--muted)">${c.length} ${esc(c.lengthUnit||'in')}</div>` : ''}
+          </div>
+        </div>
+        <div class="card-badges">
+          <span class="badge ${c.water === 'salt' ? 'bg-blue' : 'bg-teal'}">${waterLabel(c.water)}</span>
+          ${c.weather  ? `<span class="badge bg-gray">${weatherLabel(c.weather)}</span>` : ''}
+          ${c.clarity  ? `<span class="badge bg-gray">${clarityLabel(c.clarity)}</span>` : ''}
+          ${gearNames.map(n => `<span class="badge bg-amber">${esc(n)}</span>`).join('')}
+        </div>
+        ${c.notes ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:8px">${esc(c.notes)}</div>` : ''}
+        <div class="card-actions">
+          <button class="btn btn-ghost btn-sm" onclick="duplicateCatch('${c.id}')">Duplicate</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCatchModal('${c.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="openDeleteConfirm('catch','${c.id}','${esc(c.species)} on ${esc(fmtDate(c.date))}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Update species datalist
+    document.getElementById('species-list').innerHTML = getSpeciesList().map(s => `<option value="${esc(s)}"></option>`).join('');
+  }
+
+  function setCatchFilter(type, val) {
+    if (type === 'species') catchSpeciesFilter = val;
+    if (type === 'water')   catchWaterFilter   = val;
+    renderCatches();
+  }
+
+  // ── Stats View ────────────────────────────────────────────────────────────
+  function renderStats() {
+    if (catches.length === 0 && gear.length === 0) {
+      document.getElementById('stats-content').innerHTML = `<div class="empty"><div class="icon">📊</div><strong>No data yet</strong><p>Add gear and log catches to see performance stats.</p></div>`;
+      return;
+    }
+
+    // Top gear by catch count
+    const gearPerf = gear.map(g => {
+      const cs = getCatchesForGear(g.id);
+      const weights = cs.map(c => c.weight).filter(w => w > 0);
+      return {
+        g,
+        count: cs.length,
+        avgWeight: weights.length ? (weights.reduce((a,b) => a+b, 0) / weights.length).toFixed(1) : null,
+        species: [...new Set(cs.map(c => c.species).filter(Boolean))]
+      };
+    }).filter(x => x.count > 0).sort((a,b) => b.count - a.count);
+
+    // Species breakdown
+    const speciesMap = {};
+    catches.forEach(c => { if (c.species) speciesMap[c.species] = (speciesMap[c.species] || 0) + 1; });
+    const speciesList = Object.entries(speciesMap).sort((a,b) => b[1]-a[1]);
+
+    // Water type
+    const freshCount = catches.filter(c => c.water === 'fresh').length;
+    const saltCount  = catches.filter(c => c.water === 'salt').length;
+
+    // Monthly (last 6 months)
+    const monthMap = {};
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const lbl = d.toLocaleString('default', { month:'short', year:'2-digit' });
+      monthMap[key] = { lbl, count: 0 };
+    }
+    catches.forEach(c => {
+      const key = (c.date || '').slice(0, 7);
+      if (monthMap[key]) monthMap[key].count++;
+    });
+    const months = Object.values(monthMap);
+    const maxMonth = Math.max(...months.map(m => m.count), 1);
+    const maxGear = gearPerf[0]?.count || 1;
+    const maxSp   = speciesList[0]?.[1] || 1;
+
+    // Biggest catches
+    const biggest = [...catches].filter(c => c.weight > 0).sort((a,b) => b.weight - a.weight).slice(0, 5);
+
+    document.getElementById('stats-content').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><div class="val">${catches.length}</div><div class="lbl">Total Catches</div></div>
+        <div class="stat-card"><div class="val">${speciesList.length}</div><div class="lbl">Species</div></div>
+        <div class="stat-card"><div class="val">${gear.filter(g => g.consumable).length}</div><div class="lbl">Consumables</div></div>
+        <div class="stat-card"><div class="val">${gear.filter(isLow).length}</div><div class="lbl">Low Stock</div></div>
+      </div>
+
+      ${gearPerf.length > 0 ? `
+      <div class="card">
+        <div class="sec-header"><span class="sec-title">Top Performing Gear</span></div>
+        ${gearPerf.slice(0,8).map(({g, count, avgWeight, species}) => `
+          <div class="perf-row">
+            <div class="perf-header">
+              <span class="perf-label">${esc(g.name)}<span style="font-weight:400;color:var(--muted);font-size:0.75rem;margin-left:6px">${catLabel(g.category)}</span></span>
+              <span class="perf-val">${count} catch${count!==1?'es':''}${avgWeight ? ' &bull; avg ' + avgWeight + ' lb' : ''}</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((count/maxGear)*100)}%"></div></div>
+            ${species.length ? `<div style="font-size:0.73rem;color:var(--muted);margin-top:3px">${species.join(', ')}</div>` : ''}
+          </div>`).join('')}
+      </div>` : ''}
+
+      ${speciesList.length > 0 ? `
+      <div class="card">
+        <div class="sec-header"><span class="sec-title">Catches by Species</span></div>
+        ${speciesList.slice(0,8).map(([sp, count]) => `
+          <div class="perf-row">
+            <div class="perf-header"><span class="perf-label">${esc(sp)}</span><span class="perf-val">${count} catch${count!==1?'es':''}</span></div>
+            <div class="bar-bg"><div class="bar-fill green" style="width:${Math.round((count/maxSp)*100)}%"></div></div>
+          </div>`).join('')}
+      </div>` : ''}
+
+      ${catches.length > 0 ? `
+      <div class="card">
+        <div class="sec-header"><span class="sec-title">Water Type</span></div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:var(--accent)">${freshCount}</div><div style="font-size:0.73rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Freshwater</div></div>
+          <div style="flex:1;min-width:100px">
+            <div style="margin-bottom:6px"><div class="perf-header"><span>Fresh</span><span class="perf-val">${catches.length > 0 ? Math.round((freshCount/catches.length)*100) : 0}%</span></div><div class="bar-bg"><div class="bar-fill" style="width:${catches.length > 0 ? Math.round((freshCount/catches.length)*100) : 0}%"></div></div></div>
+            <div><div class="perf-header"><span>Salt</span><span class="perf-val">${catches.length > 0 ? Math.round((saltCount/catches.length)*100) : 0}%</span></div><div class="bar-bg"><div class="bar-fill amber" style="width:${catches.length > 0 ? Math.round((saltCount/catches.length)*100) : 0}%"></div></div></div>
+          </div>
+          <div style="text-align:center"><div style="font-size:1.6rem;font-weight:800;color:#f59e0b">${saltCount}</div><div style="font-size:0.73rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Saltwater</div></div>
+        </div>
+      </div>` : ''}
+
+      <div class="card">
+        <div class="sec-header"><span class="sec-title">Monthly Activity</span><span style="font-size:0.78rem;color:var(--muted)">Last 6 months</span></div>
+        ${months.map(m => `
+          <div class="perf-row">
+            <div class="perf-header"><span class="perf-label">${m.lbl}</span><span class="perf-val">${m.count} catch${m.count!==1?'es':''}</span></div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${m.count > 0 ? Math.round((m.count/maxMonth)*100) : 0}%"></div></div>
+          </div>`).join('')}
+      </div>
+
+      ${biggest.length > 0 ? `
+      <div class="card">
+        <div class="sec-header"><span class="sec-title">Biggest Catches</span></div>
+        ${biggest.map((c, i) => {
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+          return `<div class="catch-row">
+            <div class="catch-icon">${medal || '🐟'}</div>
+            <div class="catch-info">
+              <div class="catch-name">${esc(c.species)}</div>
+              <div class="catch-meta">${fmtDate(c.date)}${c.location ? ' &bull; ' + esc(c.location) : ''}</div>
+            </div>
+            <div class="catch-weight">${c.weight} ${esc(c.weightUnit||'lb')}</div>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+    `;
+  }
+
+  // ── Gear Modal ────────────────────────────────────────────────────────────
+  function openGearModal(id) {
+    editingGearId = id || null;
+    consumableOn = false;
+    clearGearForm();
+
+    if (id) {
+      const g = gear.find(x => x.id === id);
+      if (!g) return;
+      document.getElementById('gear-modal-title').textContent = 'Edit Gear';
+      document.getElementById('g-name').value      = g.name;
+      document.getElementById('g-brand').value     = g.brand || '';
+      document.getElementById('g-category').value  = g.category;
+      document.getElementById('g-water').value     = g.water || 'both';
+      document.getElementById('g-condition').value = g.condition || 'good';
+      document.getElementById('g-species').value   = g.species || '';
+      document.getElementById('g-price').value     = g.price || '';
+      document.getElementById('g-date').value      = g.purchased || '';
+      document.getElementById('g-link').value      = g.link || '';
+      document.getElementById('g-notes').value     = g.notes || '';
+      if (g.consumable) {
+        consumableOn = true;
+        document.getElementById('g-qty').value       = g.qty;
+        document.getElementById('g-unit').value      = g.unit || '';
+        document.getElementById('g-threshold').value = g.threshold || '';
+      }
+    } else {
+      document.getElementById('gear-modal-title').textContent = 'Add Gear';
+    }
+
+    updateConsumableUI();
+    document.getElementById('gear-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('g-name').focus(), 100);
+  }
+
+  function closeGearModal() {
+    document.getElementById('gear-overlay').classList.remove('open');
+    editingGearId = null;
+  }
+
+  function clearGearForm() {
+    ['g-name','g-brand','g-species','g-price','g-date','g-link','g-notes','g-qty','g-unit','g-threshold'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('g-category').value  = 'lure';
+    document.getElementById('g-water').value     = 'both';
+    document.getElementById('g-condition').value = 'good';
+    clearErr('fg-gname');
+    clearErr('fg-gqty');
+  }
+
+  function toggleConsumable() {
+    consumableOn = !consumableOn;
+    updateConsumableUI();
+  }
+
+  function updateConsumableUI() {
+    document.getElementById('consumable-switch').className = 'toggle-switch' + (consumableOn ? ' on' : '');
+    document.getElementById('consumable-fields').style.display = consumableOn ? 'block' : 'none';
+  }
+
+  function saveGear() {
+    const name = document.getElementById('g-name').value.trim();
+    let valid = true;
+
+    if (!name) { setErr('fg-gname', 'g-name'); valid = false; } else clearErr('fg-gname');
+
+    let qty = 0;
+    if (consumableOn) {
+      const qtyRaw = document.getElementById('g-qty').value.trim();
+      qty = parseFloat(qtyRaw);
+      if (qtyRaw === '' || isNaN(qty) || qty < 0) { setErr('fg-gqty', 'g-qty'); valid = false; } else clearErr('fg-gqty');
+    }
+
+    if (!valid) return;
+
+    const thresholdRaw = document.getElementById('g-threshold').value.trim();
+    const priceRaw     = document.getElementById('g-price').value.trim();
+
+    const item = {
+      name,
+      brand:     document.getElementById('g-brand').value.trim(),
+      category:  document.getElementById('g-category').value,
+      water:     document.getElementById('g-water').value,
+      condition: document.getElementById('g-condition').value,
+      species:   document.getElementById('g-species').value.trim(),
+      consumable: consumableOn,
+      qty:       consumableOn ? qty : 0,
+      unit:      consumableOn ? document.getElementById('g-unit').value.trim() : '',
+      threshold: consumableOn && thresholdRaw ? Math.max(0, parseFloat(thresholdRaw) || 0) : 0,
+      price:     priceRaw ? parseFloat(priceRaw) : null,
+      purchased: document.getElementById('g-date').value,
+      link:      document.getElementById('g-link').value.trim(),
+      notes:     document.getElementById('g-notes').value.trim(),
+    };
+
+    let saved;
+    if (editingGearId) {
+      const idx = gear.findIndex(g => g.id === editingGearId);
+      saved = { ...gear[idx], ...item };
+      if (idx !== -1) gear[idx] = saved;
+    } else {
+      saved = { id: uid(), ...item };
+      gear.push(saved);
+    }
+
+    syncGear(saved);
+    closeGearModal();
+    renderGear();
+  }
+
+  // ── Catch Modal ───────────────────────────────────────────────────────────
+  function openCatchModal(id) {
+    editingCatchId = id || null;
+    clearCatchForm();
+
+    if (id) {
+      const c = catches.find(x => x.id === id);
+      if (!c) return;
+      document.getElementById('catch-modal-title').textContent = 'Edit Catch';
+      document.getElementById('c-species').value     = c.species;
+      document.getElementById('c-water').value       = c.water || 'fresh';
+      document.getElementById('c-date').value        = c.date;
+      document.getElementById('c-location').value    = c.location || '';
+      pendingLat = c.lat ?? null;
+      pendingLng = c.lng ?? null;
+      document.getElementById('c-weight').value      = c.weight || '';
+      document.getElementById('c-weight-unit').value = c.weightUnit || 'lb';
+      document.getElementById('c-length').value      = c.length || '';
+      document.getElementById('c-length-unit').value = c.lengthUnit || 'in';
+      document.getElementById('c-weather').value     = c.weather || '';
+      document.getElementById('c-clarity').value     = c.clarity || '';
+      document.getElementById('c-notes').value       = c.notes || '';
+      renderGearPicker(c.gearIds || []);
+    } else {
+      document.getElementById('catch-modal-title').textContent = 'Log Catch';
+      document.getElementById('c-date').value = today();
+      pendingLat = pendingLng = null;
+      renderGearPicker([]);
+    }
+
+    document.getElementById('catch-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('c-species').focus(), 100);
+  }
+
+  function closeCatchModal() {
+    document.getElementById('catch-overlay').classList.remove('open');
+    editingCatchId = null;
+  }
+
+  function clearCatchForm() {
+    ['c-species','c-location','c-weight','c-length','c-notes'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('c-water').value       = 'fresh';
+    document.getElementById('c-date').value        = today();
+    document.getElementById('c-weight-unit').value = 'lb';
+    document.getElementById('c-length-unit').value = 'in';
+    document.getElementById('c-weather').value     = '';
+    document.getElementById('c-clarity').value     = '';
+    document.getElementById('gear-search').value   = '';
+    clearErr('fg-cspecies');
+    clearErr('fg-cdate');
+  }
+
+  function renderGearPicker(selectedIds) {
+    const search = document.getElementById('gear-search').value.toLowerCase();
+    const list = document.getElementById('gear-picker-list');
+    const filtered = gear.filter(g => !search || g.name.toLowerCase().includes(search) || (g.brand||'').toLowerCase().includes(search));
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="gear-picker-empty">${gear.length === 0 ? 'No gear added yet. Add gear first.' : 'No results.'}</div>`;
+      return;
+    }
+    list.innerHTML = filtered.map(g => {
+      const checked = selectedIds.includes(g.id);
+      return `<label class="gear-pick-item">
+        <input type="checkbox" value="${g.id}" ${checked ? 'checked' : ''} />
+        <div>
+          <div class="gear-pick-label">${esc(g.name)}</div>
+          <div class="gear-pick-sub">${catLabel(g.category)}${g.brand ? ' &bull; ' + esc(g.brand) : ''}</div>
+        </div>
+      </label>`;
+    }).join('');
+  }
+
+  function filterGearPicker() {
+    const checkedIds = [...document.querySelectorAll('#gear-picker-list input[type=checkbox]:checked')].map(cb => cb.value);
+    renderGearPicker(checkedIds);
+  }
+
+  function getCheckedGearIds() {
+    return [...document.querySelectorAll('#gear-picker-list input[type=checkbox]:checked')].map(cb => cb.value);
+  }
+
+  function saveCatch() {
+    const species = document.getElementById('c-species').value.trim();
+    const date    = document.getElementById('c-date').value;
+    let valid = true;
+
+    if (!species) { setErr('fg-cspecies', 'c-species'); valid = false; } else clearErr('fg-cspecies');
+    if (!date)    { setErr('fg-cdate',    'c-date');    valid = false; } else clearErr('fg-cdate');
+
+    if (!valid) return;
+
+    const weightRaw = document.getElementById('c-weight').value.trim();
+    const lengthRaw = document.getElementById('c-length').value.trim();
+
+    const entry = {
+      species,
+      water:      document.getElementById('c-water').value,
+      date,
+      location:   document.getElementById('c-location').value.trim(),
+      weight:     weightRaw ? parseFloat(weightRaw) : null,
+      weightUnit: document.getElementById('c-weight-unit').value,
+      length:     lengthRaw ? parseFloat(lengthRaw) : null,
+      lengthUnit: document.getElementById('c-length-unit').value,
+      weather:    document.getElementById('c-weather').value,
+      clarity:    document.getElementById('c-clarity').value,
+      gearIds:    getCheckedGearIds(),
+      notes:      document.getElementById('c-notes').value.trim(),
+      lat:        pendingLat,
+      lng:        pendingLng,
+    };
+
+    let saved;
+    if (editingCatchId) {
+      const idx = catches.findIndex(c => c.id === editingCatchId);
+      saved = { ...catches[idx], ...entry };
+      if (idx !== -1) catches[idx] = saved;
+    } else {
+      saved = { id: uid(), ...entry };
+      catches.push(saved);
+    }
+
+    syncCatch(saved);
+    closeCatchModal();
+    renderCatches();
+    // update species datalist
+    document.getElementById('species-list').innerHTML = getSpeciesList().map(s => `<option value="${esc(s)}"></option>`).join('');
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+  function openDeleteConfirm(type, id, name) {
+    deletingType = type;
+    deletingId   = id;
+    document.getElementById('confirm-title').textContent = type === 'gear' ? 'Delete Gear Item' : 'Delete Catch';
+    document.getElementById('confirm-name').textContent  = name;
+    document.getElementById('confirm-overlay').classList.add('open');
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirm-overlay').classList.remove('open');
+    deletingType = deletingId = null;
+  }
+
+  function confirmDelete() {
+    const type = deletingType;
+    const id   = deletingId;
+    if (type === 'gear')  { gear    = gear.filter(g => g.id !== id);    removeGear(id);  }
+    if (type === 'catch') { catches = catches.filter(c => c.id !== id); removeCatch(id); }
+    closeConfirm();
+    if (type === 'gear')  renderGear();
+    if (type === 'catch') renderCatches();
+    if (currentView === 'dashboard') renderDashboard();
+  }
+
+  // ── Duplicate catch ───────────────────────────────────────────────────────
+  function duplicateCatch(id) {
+    const original = catches.find(c => c.id === id);
+    if (!original) return;
+    const copy = { ...original, id: uid() };
+    catches.push(copy);
+    syncCatch(copy);
+    renderCatches();
+  }
+
+  // ── Form helpers ──────────────────────────────────────────────────────────
+  function setErr(fgId, inputId) {
+    document.getElementById(fgId).classList.add('has-err');
+    document.getElementById(inputId).classList.add('err');
+  }
+  function clearErr(fgId) {
+    const fg = document.getElementById(fgId);
+    fg.classList.remove('has-err');
+    const inp = fg.querySelector('input,select');
+    if (inp) inp.classList.remove('err');
+  }
+
+  // ── Map picker ───────────────────────────────────────────────────────────
+  function openMapPicker() {
+    document.getElementById('map-overlay').classList.add('open');
+
+    if (!mapInstance) {
+      mapInstance = L.map('map-el').setView([39.5, -98.35], 4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+      }).addTo(mapInstance);
+      mapInstance.on('click', e => {
+        placeMapPin(e.latlng.lat, e.latlng.lng);
+        reverseGeocode(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    // If editing a catch that already has coords, restore the pin
+    if (pendingLat !== null && pendingLng !== null) {
+      placeMapPin(pendingLat, pendingLng);
+      mapInstance.setView([pendingLat, pendingLng], 13);
+      document.getElementById('map-address-text').textContent =
+        document.getElementById('c-location').value || `${pendingLat.toFixed(5)}, ${pendingLng.toFixed(5)}`;
+    } else {
+      mapPickedLat = mapPickedLng = null;
+      mapPickedAddress = null;
+      document.getElementById('map-address-text').textContent = 'Tap the map to place a pin';
+      document.getElementById('map-address-text').style.color = 'var(--muted)';
+      document.getElementById('map-coords-text').textContent = '';
+      document.getElementById('map-use-btn').disabled = true;
+    }
+
+    setTimeout(() => mapInstance.invalidateSize(), 150);
+  }
+
+  function closeMapPicker() {
+    document.getElementById('map-overlay').classList.remove('open');
+  }
+
+  function placeMapPin(lat, lng) {
+    mapPickedLat = lat;
+    mapPickedLng = lng;
+    if (mapMarker) {
+      mapMarker.setLatLng([lat, lng]);
+    } else {
+      mapMarker = L.marker([lat, lng]).addTo(mapInstance);
+    }
+    document.getElementById('map-coords-text').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    document.getElementById('map-use-btn').disabled = false;
+  }
+
+  function reverseGeocode(lat, lng) {
+    document.getElementById('map-address-text').textContent = 'Looking up location\u2026';
+    document.getElementById('map-address-text').style.color = 'var(--muted)';
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+      headers: { 'Accept-Language': 'en' }
+    })
+      .then(r => r.json())
+      .then(data => {
+        const a = data.address || {};
+        const parts = [
+          a.body_of_water || a.lake || a.river || a.reservoir || a.bay || a.creek,
+          a.city || a.town || a.village || a.hamlet || a.county,
+          a.state,
+          a.country
+        ].filter(Boolean);
+        mapPickedAddress = parts.length ? parts.join(', ') : (data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        document.getElementById('map-address-text').textContent = mapPickedAddress;
+        document.getElementById('map-address-text').style.color = 'var(--text)';
+      })
+      .catch(() => {
+        mapPickedAddress = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        document.getElementById('map-address-text').textContent = mapPickedAddress;
+        document.getElementById('map-address-text').style.color = 'var(--text)';
+      });
+  }
+
+  function locateMe() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      mapInstance.setView([lat, lng], 13);
+      placeMapPin(lat, lng);
+      reverseGeocode(lat, lng);
+    }, () => {
+      alert('Could not get your location. Check browser permissions.');
+    });
+  }
+
+  function confirmMapLocation() {
+    if (mapPickedLat === null) return;
+    pendingLat = mapPickedLat;
+    pendingLng = mapPickedLng;
+    document.getElementById('c-location').value = mapPickedAddress || `${mapPickedLat.toFixed(4)}, ${mapPickedLng.toFixed(4)}`;
+    closeMapPicker();
+  }
+
+  // ── Keyboard ──────────────────────────────────────────────────────────────
+  document.getElementById('gear-overlay').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeGearModal(); return; }
+    if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); saveGear(); }
+  });
+  document.getElementById('catch-overlay').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeCatchModal(); return; }
+    if (e.key === 'Enter' && e.target.tagName !== 'BUTTON' && e.target.type !== 'checkbox') { e.preventDefault(); saveCatch(); }
+  });
+  document.getElementById('confirm-overlay').addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeConfirm();
+  });
+
+  // Close overlays on backdrop click
+  ['gear-overlay','catch-overlay','confirm-overlay'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => {
+      if (e.target === e.currentTarget) {
+        closeGearModal(); closeCatchModal(); closeConfirm();
+      }
+    });
+  });
+
+  // ── Horizontal scroll on mouse wheel for chip rows ────────────────────────
+  document.addEventListener('wheel', e => {
+    const chips = e.target.closest('.chips');
+    if (!chips) return;
+    e.preventDefault();
+    chips.scrollLeft += e.deltaY + e.deltaX;
+  }, { passive: false });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  document.getElementById('login-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') loginUser();
+  });
+
+  const savedUser = localStorage.getItem(ACTIVE_KEY);
+  if (savedUser) {
+    startApp(savedUser);
+  } else {
+    renderLoginScreen();
+    setTimeout(() => document.getElementById('login-input').focus(), 100);
+  }
+</script>
+</body>
+</html>
