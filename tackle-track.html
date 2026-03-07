@@ -855,6 +855,11 @@
           <label for="c-location">Location</label>
           <div class="loc-wrap">
             <input type="text" id="c-location" placeholder="e.g. Lake Erie" />
+            <button type="button" class="map-pin-btn" id="cur-loc-btn" onclick="useCurrentLocation()" title="Use current location">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+              </svg>
+            </button>
             <button type="button" class="map-pin-btn" onclick="openMapPicker()" title="Pick on map">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
@@ -1754,6 +1759,41 @@
     if (inp) inp.classList.remove('err');
   }
 
+  // ── Use current location (no map needed) ─────────────────────────────────
+  function useCurrentLocation() {
+    if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+    const btn = document.getElementById('cur-loc-btn');
+    btn.style.opacity = '0.4';
+    btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        pendingLat = lat;
+        pendingLng = lng;
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+          headers: { 'Accept-Language': 'en' }
+        })
+          .then(r => r.json())
+          .then(data => {
+            const a = data.address || {};
+            const parts = [
+              a.body_of_water || a.lake || a.river || a.reservoir || a.bay || a.creek,
+              a.city || a.town || a.village || a.hamlet || a.county,
+              a.state, a.country
+            ].filter(Boolean);
+            document.getElementById('c-location').value = parts.length ? parts.join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+          })
+          .catch(() => { document.getElementById('c-location').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`; })
+          .finally(() => { btn.style.opacity = ''; btn.disabled = false; });
+      },
+      () => {
+        alert('Could not get your location. Check that location permission is allowed for this site.');
+        btn.style.opacity = ''; btn.disabled = false;
+      },
+      { timeout: 10000 }
+    );
+  }
+
   // ── Map picker ───────────────────────────────────────────────────────────
   function openMapPicker() {
     document.getElementById('map-overlay').classList.add('open');
@@ -1783,6 +1823,12 @@
       document.getElementById('map-address-text').style.color = 'var(--muted)';
       document.getElementById('map-coords-text').textContent = '';
       document.getElementById('map-use-btn').disabled = true;
+      // Auto-center on user's location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          mapInstance.setView([pos.coords.latitude, pos.coords.longitude], 13);
+        }, () => {}, { timeout: 6000 });
+      }
     }
 
     setTimeout(() => mapInstance.invalidateSize(), 150);
