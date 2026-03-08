@@ -2440,7 +2440,7 @@
       }
       el.innerHTML = snap.docs.map(d => {
         const data = d.data();
-        const other = data.participants.find(p => p.toLowerCase() !== activeUser.toLowerCase()) || '';
+        const other = (data.participantsDisplay || data.participants).find(p => p.toLowerCase() !== activeUser.toLowerCase()) || '';
         const preview = data.lastMessage ? `${data.lastFrom === activeUser.toLowerCase() ? 'You: ' : ''}${esc(data.lastMessage)}` : 'No messages yet';
         return `<div class="rt-conv-item" onclick="openConv('${esc(other)}')">
           <div class="rt-conv-name">${esc(other)}</div>
@@ -2530,6 +2530,7 @@
       // Write conv doc first so it exists when message security rule evaluates
       await convRef.set({
         participants: [activeUser.toLowerCase(), otherUsername.toLowerCase()],
+        participantsDisplay: [activeUser, otherUsername],
         lastMessage: body,
         lastAt: now,
         lastFrom: activeUser.toLowerCase()
