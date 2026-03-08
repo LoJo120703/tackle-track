@@ -1353,14 +1353,17 @@
     if (!password) { showLoginError('Please enter a password.'); return; }
     hideLoginMessages();
     setBusy('login-signin-btn', true, 'Signing in…');
-    pendingUsername = username; // preserve typed username so onAuthStateChanged uses it
+    pendingUsername = username; // may be corrected to stored casing below
     try {
       // New accounts store real email in Firestore; old accounts fall back to fake email
       let email = authEmail(username);
       const fakeEmail = email;
       try {
         const doc = await db.collection('usernames').doc(username.toLowerCase()).get();
-        if (doc.exists && doc.data().email) email = doc.data().email;
+        if (doc.exists) {
+          if (doc.data().email) email = doc.data().email;
+          if (doc.data().username) pendingUsername = doc.data().username; // use stored casing
+        }
       } catch {}
       try {
         await auth.signInWithEmailAndPassword(email, password);
@@ -2072,11 +2075,12 @@
 
   // ── Social / People ───────────────────────────────────────────────────────
   function registerProfile() {
-    db.collection('usernames').doc(activeUser.toLowerCase()).set({
-      username: activeUser,
-      usernameLower: activeUser.toLowerCase(),
-      joinedAt: new Date().toISOString()
-    }, { merge: true }).catch(console.error);
+    // Only update usernameLower/joinedAt; never overwrite username casing from signIn flow
+    db.collection('usernames').doc(activeUser.toLowerCase()).get().then(doc => {
+      const data = { usernameLower: activeUser.toLowerCase(), joinedAt: new Date().toISOString() };
+      if (!doc.exists || !doc.data().username) data.username = activeUser;
+      db.collection('usernames').doc(activeUser.toLowerCase()).set(data, { merge: true }).catch(console.error);
+    }).catch(console.error);
   }
 
   async function loadFollowing() {
