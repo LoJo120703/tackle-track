@@ -2776,15 +2776,18 @@
     errEl.textContent = '';
     if (!newEmail || !newEmail.includes('@')) { errEl.textContent = 'Enter a valid email address.'; return; }
     if (!password) { errEl.textContent = 'Enter your current password to confirm.'; return; }
-    setBusy('profile-email-save-btn', true, 'Saving…');
+    setBusy('profile-email-save-btn', true, 'Sending…');
     try {
-      const currentAuthEmail = auth.currentUser.email;
-      const credential = firebase.auth.EmailAuthProvider.credential(currentAuthEmail, password);
+      const credential = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, password);
       await auth.currentUser.reauthenticateWithCredential(credential);
-      await auth.currentUser.updateEmail(newEmail);
+      // Store in Firestore now so sign-in lookup works immediately
       await db.collection('usernames').doc(activeUser.toLowerCase()).set({ email: newEmail }, { merge: true });
-      closeUserStats();
-      viewUserStats(activeUser);
+      // Send verification to new address — Firebase Auth updates after user clicks the link
+      await auth.currentUser.verifyBeforeUpdateEmail(newEmail);
+      hideEmailEditForm();
+      errEl.style.color = 'var(--success)';
+      errEl.textContent = `Verification email sent to ${newEmail}. Click the link to confirm.`;
+      errEl.style.display = 'block';
     } catch (e) {
       setBusy('profile-email-save-btn', false, 'Save');
       if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') errEl.textContent = 'Incorrect password.';
