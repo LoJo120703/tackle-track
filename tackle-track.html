@@ -1358,6 +1358,7 @@
 
   const USERS_KEY = 'tt_users';
   let activeUser  = null;
+  let pendingUsername = null; // set by signIn() so onAuthStateChanged uses the typed username
 
   // ── Firebase ──────────────────────────────────────────────────────────────
   // Paste your Firebase config here after creating a project at console.firebase.google.com
@@ -1468,15 +1469,27 @@
     if (!password) { showLoginError('Please enter a password.'); return; }
     hideLoginMessages();
     setBusy('login-signin-btn', true, 'Signing in…');
+    pendingUsername = username; // preserve typed username so onAuthStateChanged uses it
     try {
       // New accounts store real email in Firestore; old accounts fall back to fake email
       let email = authEmail(username);
+      const fakeEmail = email;
       try {
         const doc = await db.collection('usernames').doc(username.toLowerCase()).get();
         if (doc.exists && doc.data().email) email = doc.data().email;
       } catch {}
-      await auth.signInWithEmailAndPassword(email, password);
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+      } catch (e) {
+        // If real email from Firestore fails, fall back to legacy fake email
+        if (email !== fakeEmail && ['auth/user-not-found','auth/invalid-credential','auth/wrong-password'].includes(e.code)) {
+          await auth.signInWithEmailAndPassword(fakeEmail, password);
+        } else {
+          throw e;
+        }
+      }
     } catch (e) {
+      pendingUsername = null;
       setBusy('login-signin-btn', false, 'Sign In');
       if (['auth/user-not-found','auth/invalid-credential','auth/wrong-password','auth/invalid-email'].includes(e.code))
         showLoginError('Incorrect username or password.');
@@ -1496,6 +1509,7 @@
     if (password.length < 6) { showLoginError('Password must be at least 6 characters.'); return; }
     hideLoginMessages();
     setBusy('login-create-btn', true, 'Creating…');
+    pendingUsername = username;
     try {
       // Check username availability
       const existing = await db.collection('usernames').doc(username.toLowerCase()).get();
@@ -1507,6 +1521,7 @@
         username, usernameLower: username.toLowerCase(), email, joinedAt: new Date().toISOString()
       });
     } catch (e) {
+      pendingUsername = null;
       setBusy('login-create-btn', false, 'Create Account');
       if (e.code === 'auth/email-already-in-use') showLoginError('An account with that email already exists.');
       else if (e.code === 'auth/weak-password') showLoginError('Password must be at least 6 characters.');
@@ -2771,29 +2786,17 @@
 
   async function saveProfileEmail() {
     const newEmail = document.getElementById('profile-new-email').value.trim();
-    const password = document.getElementById('profile-email-password').value;
     const errEl    = document.getElementById('profile-email-error');
     errEl.textContent = '';
     if (!newEmail || !newEmail.includes('@')) { errEl.textContent = 'Enter a valid email address.'; return; }
-    if (!password) { errEl.textContent = 'Enter your current password to confirm.'; return; }
-    setBusy('profile-email-save-btn', true, 'Sending…');
+    setBusy('profile-email-save-btn', true, 'Saving…');
     try {
-      const credential = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, password);
-      await auth.currentUser.reauthenticateWithCredential(credential);
-      // Store in Firestore now so sign-in lookup works immediately
       await db.collection('usernames').doc(activeUser.toLowerCase()).set({ email: newEmail }, { merge: true });
-      // Send verification to new address — Firebase Auth updates after user clicks the link
-      await auth.currentUser.verifyBeforeUpdateEmail(newEmail);
-      hideEmailEditForm();
-      errEl.style.color = 'var(--success)';
-      errEl.textContent = `Verification email sent to ${newEmail}. Click the link to confirm.`;
-      errEl.style.display = 'block';
+      closeUserStats();
+      viewUserStats(activeUser);
     } catch (e) {
       setBusy('profile-email-save-btn', false, 'Save');
-      if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') errEl.textContent = 'Incorrect password.';
-      else if (e.code === 'auth/email-already-in-use') errEl.textContent = 'That email is already in use.';
-      else if (e.code === 'auth/invalid-email') errEl.textContent = 'Invalid email address.';
-      else errEl.textContent = `Failed. (${e.code})`;
+      errEl.textContent = 'Failed to save. Try again.';
     }
   }
 
@@ -3216,7 +3219,8 @@
 
   auth.onAuthStateChanged(async user => {
     if (user) {
-      const username = user.displayName || user.email.split('@')[0];
+      const username = pendingUsername || user.displayName || user.email.split('@')[0];
+      pendingUsername = null;
       await startApp(username);
     } else {
       document.getElementById('loading-overlay').classList.add('hidden');
