@@ -383,37 +383,6 @@
     .toggle-switch.on { background: var(--accent); }
     .toggle-switch.on::after { transform: translateX(18px); }
 
-    /* ── Gear selector in catch modal ── */
-    .gear-picker {
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-    }
-    .gear-picker-search {
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--border);
-      width: 100%;
-      border-radius: 0;
-      border-left: none;
-      border-right: none;
-      border-top: none;
-    }
-    .gear-picker-search:focus { border-color: var(--border); outline: none; }
-    .gear-picker-list { max-height: 180px; overflow-y: auto; }
-    .gear-pick-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 9px 12px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-    }
-    .gear-pick-item:last-child { border-bottom: none; }
-    .gear-pick-item:hover { background: var(--bg); }
-    .gear-pick-item input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
-    .gear-pick-label { font-size: 0.875rem; flex: 1; cursor: pointer; }
-    .gear-pick-sub { font-size: 0.73rem; color: var(--muted); }
-    .gear-picker-empty { padding: 20px; text-align: center; font-size: 0.83rem; color: var(--muted); }
 
     /* ── Profile pictures & photos ── */
     .header-avatar {
@@ -534,22 +503,6 @@
     .fish-measurements input:focus, .fish-measurements select:focus { border-color: var(--accent); }
     .fish-species-input { width: 100%; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: inherit; outline: none; background: var(--surface); color: var(--text); margin-bottom: 8px; }
     .fish-species-input:focus { border-color: var(--accent); }
-    .gear-chips-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
-    .gear-chip {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1.5px solid var(--border);
-      font-size: 0.73rem;
-      font-weight: 600;
-      cursor: pointer;
-      color: var(--muted);
-      transition: all 0.15s;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .gear-chip.selected { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
     .fish-empty { text-align: center; padding: 16px; color: var(--muted); font-size: 0.83rem; border: 1.5px dashed var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; }
 
     /* ── Multi-fish card display ── */
@@ -874,6 +827,30 @@
     .fish-entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
     .fish-measurements { display: grid; grid-template-columns: 2fr 1fr 2fr 1fr; gap: 6px; margin-top: 6px; }
     .fish-measurements .form-group { margin-bottom: 0; }
+
+    /* ── Reel Talk ── */
+    .rt-conv-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .rt-conv-item:hover { border-color: var(--accent); }
+    .rt-conv-name { font-weight: 700; font-size: 0.9rem; }
+    .rt-conv-preview { font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rt-bubble { max-width: 78%; padding: 8px 12px; border-radius: 16px; font-size: 0.88rem; line-height: 1.4; word-break: break-word; }
+    .rt-bubble.mine { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .rt-bubble.theirs { background: var(--border); color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; }
+    .rt-bubble-wrap { display: flex; flex-direction: column; }
+    .rt-bubble-wrap.mine { align-items: flex-end; }
+    .rt-bubble-wrap.theirs { align-items: flex-start; }
+    .rt-time { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -889,7 +866,7 @@
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">Tackle<span>Track</span></div>
-    <div class="login-tagline">Your fishing gear &amp; catch companion</div>
+    <div class="login-tagline">Your fishing catch companion</div>
 
     <input class="login-input" id="login-username" type="text" placeholder="Username" autocomplete="username" autocapitalize="none" maxlength="32" style="margin-bottom:10px" />
     <input class="login-input" id="login-email" type="email" placeholder="Email (used for password reset)" autocomplete="email" style="display:none;margin-bottom:10px" />
@@ -950,18 +927,33 @@
       <button class="btn btn-ghost btn-sm" onclick="showView('catches')">View all</button>
     </div>
     <div class="card" id="dash-catches"></div>
-    <div class="divider"></div>
-    <div class="sec-header">
-      <span class="sec-title">Top Performing Gear</span>
-      <button class="btn btn-ghost btn-sm" onclick="showView('stats')">Full stats</button>
-    </div>
-    <div class="card" id="dash-top-gear"></div>
   </div>
 
-  <!-- ── Gear ── -->
-  <div id="view-gear" class="view">
-    <div class="chips" id="gear-chips"></div>
-    <div id="gear-list"></div>
+  <!-- ── Messages (Reel Talk) ── -->
+  <div id="view-messages" class="view">
+    <div id="rt-conv-list-wrap">
+      <div class="sec-header">
+        <span class="sec-title">Reel Talk</span>
+      </div>
+      <!-- new conversation row -->
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="text" id="rt-new-user" placeholder="Start chat with username…" autocomplete="off" autocapitalize="none" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.9rem;font-family:inherit;outline:none;background:var(--surface);color:var(--text);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
+        <button class="btn btn-primary" onclick="startNewConv()">Chat</button>
+      </div>
+      <div id="rt-conv-list"><div class="empty"><div class="spinner"></div></div></div>
+    </div>
+    <!-- chat pane (hidden until conversation selected) -->
+    <div id="rt-chat-wrap" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <button class="btn btn-ghost btn-sm" onclick="closeChat()">← Back</button>
+        <span id="rt-chat-title" style="font-weight:700;font-size:1rem"></span>
+      </div>
+      <div id="rt-messages" style="display:flex;flex-direction:column;gap:8px;min-height:120px;max-height:55vh;overflow-y:auto;padding:4px 0;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="rt-input" placeholder="Say something…" autocomplete="off" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.9rem;font-family:inherit;outline:none;background:var(--surface);color:var(--text);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter')sendMessage()" />
+        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── Catches ── -->
@@ -1021,11 +1013,9 @@
     </svg>
     Dashboard
   </button>
-  <button onclick="showView('gear')" id="nav-gear">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-    </svg>
-    Gear
+  <button onclick="showView('messages')" id="nav-messages">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Reel Talk
   </button>
   <button onclick="showView('catches')" id="nav-catches">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -1042,119 +1032,6 @@
     Stats
   </button>
 </nav>
-
-<!-- ── Gear Modal ── -->
-<div class="overlay" id="gear-overlay">
-  <div class="modal" id="gear-modal">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h2 id="gear-modal-title">Add Gear</h2>
-      <button class="modal-close" onclick="closeGearModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group" id="fg-gname">
-        <label for="g-name">Item Name *</label>
-        <input type="text" id="g-name" placeholder="e.g. Rapala X-Rap" />
-        <div class="err-msg">Name is required.</div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="g-brand">Brand</label>
-          <input type="text" id="g-brand" placeholder="e.g. Rapala" />
-        </div>
-        <div class="form-group">
-          <label for="g-category">Category *</label>
-          <select id="g-category">
-            <option value="lure">Lure</option>
-            <option value="rod">Rod</option>
-            <option value="reel">Reel</option>
-            <option value="hook">Hook</option>
-            <option value="line">Line</option>
-            <option value="leader">Leader</option>
-            <option value="weight">Weight / Sinker</option>
-            <option value="bait">Bait</option>
-            <option value="accessory">Accessory</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="g-water">Water Type</label>
-          <select id="g-water">
-            <option value="both">Fresh &amp; Salt</option>
-            <option value="fresh">Freshwater</option>
-            <option value="salt">Saltwater</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="g-condition">Condition</label>
-          <select id="g-condition">
-            <option value="new">New</option>
-            <option value="good">Good</option>
-            <option value="worn">Worn</option>
-            <option value="repair">Needs Repair</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="g-species">Target Species</label>
-        <input type="text" id="g-species" placeholder="e.g. Bass, Redfish, Trout" />
-        <div class="hint">Comma-separated list of target species.</div>
-      </div>
-
-      <div class="toggle-row" onclick="toggleConsumable()" id="consumable-toggle">
-        <div>
-          <div class="toggle-label">Consumable Item</div>
-          <div class="toggle-sub">Track quantity &amp; get low stock alerts</div>
-        </div>
-        <div class="toggle-switch" id="consumable-switch"></div>
-      </div>
-
-      <div id="consumable-fields" style="display:none">
-        <div class="form-row">
-          <div class="form-group" id="fg-gqty">
-            <label for="g-qty">Quantity *</label>
-            <input type="number" id="g-qty" min="0" placeholder="0" />
-            <div class="err-msg">Enter a valid quantity.</div>
-          </div>
-          <div class="form-group">
-            <label for="g-unit">Unit</label>
-            <input type="text" id="g-unit" placeholder="e.g. pcs, yd, oz" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="g-threshold">Low Stock Threshold</label>
-          <input type="number" id="g-threshold" min="0" placeholder="e.g. 5" />
-          <div class="hint">Alert when quantity falls at or below this number.</div>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="g-price">Price Paid ($)</label>
-          <input type="number" id="g-price" min="0" step="0.01" placeholder="0.00" />
-        </div>
-        <div class="form-group">
-          <label for="g-date">Date Purchased</label>
-          <input type="date" id="g-date" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="g-link">Buy / Reorder Link</label>
-        <input type="url" id="g-link" placeholder="https://..." />
-      </div>
-      <div class="form-group">
-        <label for="g-notes">Notes</label>
-        <input type="text" id="g-notes" placeholder="Optional notes" />
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeGearModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveGear()">Save</button>
-    </div>
-  </div>
-</div>
 
 <!-- ── Catch Modal ── -->
 <div class="overlay" id="catch-overlay">
@@ -1226,14 +1103,6 @@
             <option value="murky">Murky</option>
           </select>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Gear Used</label>
-        <div class="gear-picker">
-          <input type="text" class="gear-picker-search" id="gear-search" placeholder="Search gear..." oninput="filterGearPicker()" />
-          <div class="gear-picker-list" id="gear-picker-list"></div>
-        </div>
-        <div class="hint">Select the lure, bait, or tackle used for this session.</div>
       </div>
       <div class="form-group">
         <label>Photo</label>
@@ -1337,18 +1206,16 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   // ── State ─────────────────────────────────────────────────────────────────
-  let gear = [];
   let catches = [];
   let currentView = 'dashboard';
-  let gearCatFilter = 'all';
   let catchSpeciesFilter = 'all';
   let catchWaterFilter = 'all';
-  let editingGearId = null;
   let editingCatchId = null;
   let deletingType = null;
   let deletingId = null;
-  let consumableOn = false;
   let pendingLat = null;
+  let activeConvId = null;
+  let rtUnsubscribe = null;
   let pendingLng = null;
   let followingList = [];
   let peopleSearchResults = [];
@@ -1391,19 +1258,15 @@
   const db   = firebase.firestore();
   db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
 
-  function gearCol()   { return db.collection(`users/${activeUser}/gear`); }
   function catchCol()  { return db.collection(`users/${activeUser}/catches`); }
 
   // ── Persistence ───────────────────────────────────────────────────────────
   async function loadData() {
-    const [gs, cs] = await Promise.all([ gearCol().get(), catchCol().get() ]);
-    gear    = gs.docs.map(d => d.data());
+    const cs = await catchCol().get();
     catches = cs.docs.map(d => d.data());
   }
 
-  function syncGear(item)   { gearCol().doc(item.id).set(item).catch(console.error); }
   function syncCatch(item)  { catchCol().doc(item.id).set(item).catch(console.error); }
-  function removeGear(id)   { gearCol().doc(id).delete().catch(console.error); }
   function removeCatch(id)  { catchCol().doc(id).delete().catch(console.error); }
 
   // ── Login ─────────────────────────────────────────────────────────────────
@@ -1590,10 +1453,6 @@
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function isLow(g) {
-    return g.consumable && g.threshold > 0 && g.qty <= g.threshold;
-  }
-
   function today() {
     return new Date().toISOString().slice(0, 10);
   }
@@ -1603,17 +1462,6 @@
     const [y, m, day] = d.split('-');
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return `${months[+m-1]} ${+day}, ${y}`;
-  }
-
-  function catLabel(c) {
-    return { lure:'Lure', rod:'Rod', reel:'Reel', hook:'Hook', line:'Line',
-      leader:'Leader', weight:'Weight', bait:'Bait', accessory:'Accessory', other:'Other' }[c] || c;
-  }
-
-  function catColor(c) {
-    return { lure:'bg-teal', rod:'bg-blue', reel:'bg-purple', hook:'bg-gray',
-      line:'bg-gray', leader:'bg-gray', weight:'bg-gray', bait:'bg-green',
-      accessory:'bg-amber', other:'bg-gray' }[c] || 'bg-gray';
   }
 
   function waterLabel(w) {
@@ -1628,22 +1476,10 @@
     return { clear:'Clear', stained:'Stained', murky:'Murky' }[c] || '';
   }
 
-  function condLabel(c) {
-    return { new:'New', good:'Good', worn:'Worn', repair:'Needs Repair' }[c] || c;
-  }
-
-  function condColor(c) {
-    return { new:'bg-green', good:'bg-teal', worn:'bg-amber', repair:'bg-red' }[c] || 'bg-gray';
-  }
-
   function getSpeciesList() {
     const sp = new Set();
     catches.forEach(c => getCatchFish(c).forEach(f => { if (f.species) sp.add(f.species); }));
     return [...sp].sort();
-  }
-
-  function getCatchesForGear(gearId) {
-    return catches.filter(c => c.gearIds && c.gearIds.includes(gearId));
   }
 
   // ── Navigation ────────────────────────────────────────────────────────────
@@ -1655,41 +1491,34 @@
     document.getElementById('nav-' + v).classList.add('active');
 
     const fab = document.getElementById('fab');
-    fab.classList.toggle('hidden', v === 'dashboard' || v === 'stats' || v === 'people');
+    fab.classList.toggle('hidden', v === 'dashboard' || v === 'stats' || v === 'people' || v === 'messages');
 
     if (v === 'dashboard') renderDashboard();
-    if (v === 'gear')      renderGear();
+    if (v === 'messages')  loadConversations();
     if (v === 'catches')   renderCatches();
     if (v === 'stats')     renderStats();
     if (v === 'people')    { activePeopleTab === 'feed' ? renderFeed() : renderPeopleView(); }
   }
 
   function openFab() {
-    if (currentView === 'gear')    openGearModal();
     if (currentView === 'catches') openCatchModal();
   }
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
   function renderDashboard() {
-    const lowStock = gear.filter(isLow);
     const species = [...new Set(catches.flatMap(c => getCatchFish(c).map(f => f.species)).filter(Boolean))];
+    const freshCount = catches.filter(c => c.water === 'fresh').length;
+    const saltCount  = catches.filter(c => c.water === 'salt').length;
 
     // Stats
     document.getElementById('dash-stats').innerHTML = `
-      <div class="stat-card"><div class="val">${gear.length}</div><div class="lbl">Gear Items</div></div>
       <div class="stat-card"><div class="val">${catches.length}</div><div class="lbl">Total Catches</div></div>
       <div class="stat-card"><div class="val">${species.length}</div><div class="lbl">Species Caught</div></div>
-      <div class="stat-card"><div class="val ${lowStock.length > 0 ? 'danger' : ''}">${lowStock.length}</div><div class="lbl">Low Stock</div></div>
+      <div class="stat-card"><div class="val">${freshCount}</div><div class="lbl">Freshwater</div></div>
+      <div class="stat-card"><div class="val">${saltCount}</div><div class="lbl">Saltwater</div></div>
     `;
 
-    // Alert
-    const alertEl = document.getElementById('dash-alert');
-    if (lowStock.length > 0) {
-      alertEl.innerHTML = `<div class="alert"><strong>Low stock alert:</strong> ${lowStock.length} item${lowStock.length !== 1 ? 's are' : ' is'} running low.
-        <ul>${lowStock.map(g => `<li>${esc(g.name)} &mdash; ${g.qty} ${esc(g.unit || 'units')} remaining (threshold: ${g.threshold})${g.link ? ` <a href="${esc(g.link)}" target="_blank" rel="noopener noreferrer">Buy &rarr;</a>` : ''}</li>`).join('')}</ul></div>`;
-    } else {
-      alertEl.innerHTML = '';
-    }
+    document.getElementById('dash-alert').innerHTML = '';
 
     // Recent catches
     const recent = [...catches].sort((a,b) => (b.date||'').localeCompare(a.date||'')).slice(0, 5);
@@ -1698,7 +1527,6 @@
       catchEl.innerHTML = `<div class="empty"><div class="icon">🎣</div><strong>No catches logged yet</strong><p>Head to Catches to log your first fish.</p></div>`;
     } else {
       catchEl.innerHTML = recent.map(c => {
-        const gearNames = (c.gearIds || []).map(id => gear.find(g => g.id === id)?.name).filter(Boolean);
         const fish = getCatchFish(c);
         const fishNames = fish.map(f => esc(f.species || 'Unknown')).join(', ');
         const bigFish = fish.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight)[0];
@@ -1706,83 +1534,12 @@
           <div class="catch-icon">🐟</div>
           <div class="catch-info">
             <div class="catch-name">${fishNames}</div>
-            <div class="catch-meta">${fmtDate(c.date)}${c.location ? ' &bull; ' + esc(c.location) : ''}${gearNames.length ? ' &bull; ' + esc(gearNames[0]) : ''}</div>
+            <div class="catch-meta">${fmtDate(c.date)}${c.location ? ' &bull; ' + esc(c.location) : ''}</div>
           </div>
           ${bigFish ? `<div class="catch-weight">${bigFish.weight} ${esc(bigFish.weightUnit||'lb')}</div>` : ''}
         </div>`;
       }).join('');
     }
-
-    // Top gear
-    const topGearEl = document.getElementById('dash-top-gear');
-    const gearStats = gear.map(g => ({ g, count: getCatchesForGear(g.id).length }))
-      .filter(x => x.count > 0).sort((a,b) => b.count - a.count).slice(0, 5);
-    const max = gearStats[0]?.count || 1;
-    if (gearStats.length === 0) {
-      topGearEl.innerHTML = `<div class="empty"><div class="icon">📊</div><strong>No performance data yet</strong><p>Link gear to catches to track performance.</p></div>`;
-    } else {
-      topGearEl.innerHTML = gearStats.map(({ g, count }) => `
-        <div class="perf-row">
-          <div class="perf-header"><span class="perf-label">${esc(g.name)}</span><span class="perf-val">${count} catch${count !== 1 ? 'es' : ''}</span></div>
-          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((count/max)*100)}%"></div></div>
-        </div>`).join('');
-    }
-  }
-
-  // ── Gear View ─────────────────────────────────────────────────────────────
-  function renderGear() {
-    const cats = ['all', 'rod', 'reel', 'lure', 'hook', 'line', 'leader', 'weight', 'bait', 'accessory', 'consumables', 'other'];
-    const chipLabels = { all:'All', rod:'Rods', reel:'Reels', lure:'Lures', hook:'Hooks', line:'Line',
-      leader:'Leaders', weight:'Weights', bait:'Bait', accessory:'Accessories', consumables:'Consumables', other:'Other' };
-
-    document.getElementById('gear-chips').innerHTML = cats.map(c =>
-      `<button class="chip ${gearCatFilter === c ? 'active' : ''}" onclick="setGearFilter('${c}')">${chipLabels[c]}</button>`
-    ).join('');
-
-    let filtered = gear;
-    if (gearCatFilter === 'consumables') filtered = gear.filter(g => g.consumable);
-    else if (gearCatFilter !== 'all') filtered = gear.filter(g => g.category === gearCatFilter);
-
-    filtered = [...filtered].sort((a,b) => a.name.localeCompare(b.name));
-
-    const el = document.getElementById('gear-list');
-    if (filtered.length === 0) {
-      el.innerHTML = `<div class="empty"><div class="icon">🎣</div><strong>${gear.length === 0 ? 'No gear added yet' : 'No items in this category'}</strong><p>${gear.length === 0 ? 'Tap + to add your first item.' : 'Try a different filter.'}</p></div>`;
-      return;
-    }
-
-    el.innerHTML = filtered.map(g => {
-      const catchCount = getCatchesForGear(g.id).length;
-      const low = isLow(g);
-      return `<div class="card">
-        <div class="card-top">
-          <div>
-            <div class="card-name">${esc(g.name)}</div>
-            <div class="card-sub">${g.brand ? esc(g.brand) + ' &bull; ' : ''}${catLabel(g.category)}</div>
-          </div>
-          ${low ? `<span class="badge bg-red">Low Stock</span>` : ''}
-        </div>
-        <div class="card-badges">
-          <span class="badge ${catColor(g.category)}">${catLabel(g.category)}</span>
-          <span class="badge bg-gray">${waterLabel(g.water)}</span>
-          <span class="badge ${condColor(g.condition)}">${condLabel(g.condition)}</span>
-          ${g.consumable ? `<span class="badge ${low ? 'bg-red' : 'bg-green'}">${g.qty} ${g.unit || 'units'}${g.threshold > 0 ? ' / ' + g.threshold : ''}</span>` : ''}
-          ${catchCount > 0 ? `<span class="badge bg-teal">${catchCount} catch${catchCount !== 1 ? 'es' : ''}</span>` : ''}
-          ${g.species ? g.species.split(',').slice(0,2).map(s => `<span class="badge bg-gray">${esc(s.trim())}</span>`).join('') : ''}
-        </div>
-        ${g.notes ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:8px">${esc(g.notes)}</div>` : ''}
-        <div class="card-actions">
-          ${g.link ? `<a href="${esc(g.link)}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">Buy &rarr;</a>` : ''}
-          <button class="btn btn-ghost btn-sm" onclick="openGearModal('${g.id}')">Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="openDeleteConfirm('gear','${g.id}','${esc(g.name)}')">Delete</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  function setGearFilter(cat) {
-    gearCatFilter = cat;
-    renderGear();
   }
 
   // ── Catches View ──────────────────────────────────────────────────────────
@@ -1810,7 +1567,6 @@
     catches.filter(c => c.isPublic !== false).forEach(c => { selfPostsMap[c.id] = { ...c, _author: activeUser }; });
 
     el.innerHTML = filtered.map(c => {
-      const gearNames = (c.gearIds || []).map(id => gear.find(g => g.id === id)?.name).filter(Boolean);
       const fish = getCatchFish(c);
       const fishNames = fish.map(f => esc(f.species || 'Unknown')).join(', ');
       const bigFish = fish.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight)[0];
@@ -1833,7 +1589,6 @@
           ${c.isPublic === false ? `<span class="badge bg-gray">🔒 Private</span>` : ''}
           ${c.weather  ? `<span class="badge bg-gray">${weatherLabel(c.weather)}</span>` : ''}
           ${c.clarity  ? `<span class="badge bg-gray">${clarityLabel(c.clarity)}</span>` : ''}
-          ${gearNames.map(n => `<span class="badge bg-amber">${esc(n)}</span>`).join('')}
         </div>
         ${c.notes ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:8px">${esc(c.notes)}</div>` : ''}
         <div class="card-actions">
@@ -1858,22 +1613,10 @@
 
   // ── Stats View ────────────────────────────────────────────────────────────
   function renderStats() {
-    if (catches.length === 0 && gear.length === 0) {
-      document.getElementById('stats-content').innerHTML = `<div class="empty"><div class="icon">📊</div><strong>No data yet</strong><p>Add gear and log catches to see performance stats.</p></div>`;
+    if (catches.length === 0) {
+      document.getElementById('stats-content').innerHTML = `<div class="empty"><div class="icon">📊</div><strong>No data yet</strong><p>Log catches to see performance stats.</p></div>`;
       return;
     }
-
-    // Top gear by catch count
-    const gearPerf = gear.map(g => {
-      const cs = getCatchesForGear(g.id);
-      const weights = cs.flatMap(c => getCatchFish(c).map(f => f.weight)).filter(w => w > 0);
-      return {
-        g,
-        count: cs.length,
-        avgWeight: weights.length ? (weights.reduce((a,b) => a+b, 0) / weights.length).toFixed(1) : null,
-        species: [...new Set(cs.flatMap(c => getCatchFish(c).map(f => f.species)).filter(Boolean))]
-      };
-    }).filter(x => x.count > 0).sort((a,b) => b.count - a.count);
 
     // Species breakdown
     const speciesMap = {};
@@ -1899,7 +1642,6 @@
     });
     const months = Object.values(monthMap);
     const maxMonth = Math.max(...months.map(m => m.count), 1);
-    const maxGear = gearPerf[0]?.count || 1;
     const maxSp   = speciesList[0]?.[1] || 1;
 
     // Biggest catches
@@ -1910,23 +1652,9 @@
       <div class="stats-grid">
         <div class="stat-card"><div class="val">${catches.length}</div><div class="lbl">Total Catches</div></div>
         <div class="stat-card"><div class="val">${speciesList.length}</div><div class="lbl">Species</div></div>
-        <div class="stat-card"><div class="val">${gear.filter(g => g.consumable).length}</div><div class="lbl">Consumables</div></div>
-        <div class="stat-card"><div class="val">${gear.filter(isLow).length}</div><div class="lbl">Low Stock</div></div>
+        <div class="stat-card"><div class="val">${freshCount}</div><div class="lbl">Freshwater</div></div>
+        <div class="stat-card"><div class="val">${saltCount}</div><div class="lbl">Saltwater</div></div>
       </div>
-
-      ${gearPerf.length > 0 ? `
-      <div class="card">
-        <div class="sec-header"><span class="sec-title">Top Performing Gear</span></div>
-        ${gearPerf.slice(0,8).map(({g, count, avgWeight, species}) => `
-          <div class="perf-row">
-            <div class="perf-header">
-              <span class="perf-label">${esc(g.name)}<span style="font-weight:400;color:var(--muted);font-size:0.75rem;margin-left:6px">${catLabel(g.category)}</span></span>
-              <span class="perf-val">${count} catch${count!==1?'es':''}${avgWeight ? ' &bull; avg ' + avgWeight + ' lb' : ''}</span>
-            </div>
-            <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((count/maxGear)*100)}%"></div></div>
-            ${species.length ? `<div style="font-size:0.73rem;color:var(--muted);margin-top:3px">${species.join(', ')}</div>` : ''}
-          </div>`).join('')}
-      </div>` : ''}
 
       ${speciesList.length > 0 ? `
       <div class="card">
@@ -1978,117 +1706,6 @@
     `;
   }
 
-  // ── Gear Modal ────────────────────────────────────────────────────────────
-  function openGearModal(id) {
-    editingGearId = id || null;
-    consumableOn = false;
-    clearGearForm();
-
-    if (id) {
-      const g = gear.find(x => x.id === id);
-      if (!g) return;
-      document.getElementById('gear-modal-title').textContent = 'Edit Gear';
-      document.getElementById('g-name').value      = g.name;
-      document.getElementById('g-brand').value     = g.brand || '';
-      document.getElementById('g-category').value  = g.category;
-      document.getElementById('g-water').value     = g.water || 'both';
-      document.getElementById('g-condition').value = g.condition || 'good';
-      document.getElementById('g-species').value   = g.species || '';
-      document.getElementById('g-price').value     = g.price || '';
-      document.getElementById('g-date').value      = g.purchased || '';
-      document.getElementById('g-link').value      = g.link || '';
-      document.getElementById('g-notes').value     = g.notes || '';
-      if (g.consumable) {
-        consumableOn = true;
-        document.getElementById('g-qty').value       = g.qty;
-        document.getElementById('g-unit').value      = g.unit || '';
-        document.getElementById('g-threshold').value = g.threshold || '';
-      }
-    } else {
-      document.getElementById('gear-modal-title').textContent = 'Add Gear';
-    }
-
-    updateConsumableUI();
-    document.getElementById('gear-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('g-name').focus(), 100);
-  }
-
-  function closeGearModal() {
-    document.getElementById('gear-overlay').classList.remove('open');
-    editingGearId = null;
-  }
-
-  function clearGearForm() {
-    ['g-name','g-brand','g-species','g-price','g-date','g-link','g-notes','g-qty','g-unit','g-threshold'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
-    document.getElementById('g-category').value  = 'lure';
-    document.getElementById('g-water').value     = 'both';
-    document.getElementById('g-condition').value = 'good';
-    clearErr('fg-gname');
-    clearErr('fg-gqty');
-  }
-
-  function toggleConsumable() {
-    consumableOn = !consumableOn;
-    updateConsumableUI();
-  }
-
-  function updateConsumableUI() {
-    document.getElementById('consumable-switch').className = 'toggle-switch' + (consumableOn ? ' on' : '');
-    document.getElementById('consumable-fields').style.display = consumableOn ? 'block' : 'none';
-  }
-
-  function saveGear() {
-    const name = document.getElementById('g-name').value.trim();
-    let valid = true;
-
-    if (!name) { setErr('fg-gname', 'g-name'); valid = false; } else clearErr('fg-gname');
-
-    let qty = 0;
-    if (consumableOn) {
-      const qtyRaw = document.getElementById('g-qty').value.trim();
-      qty = parseFloat(qtyRaw);
-      if (qtyRaw === '' || isNaN(qty) || qty < 0) { setErr('fg-gqty', 'g-qty'); valid = false; } else clearErr('fg-gqty');
-    }
-
-    if (!valid) return;
-
-    const thresholdRaw = document.getElementById('g-threshold').value.trim();
-    const priceRaw     = document.getElementById('g-price').value.trim();
-
-    const item = {
-      name,
-      brand:     document.getElementById('g-brand').value.trim(),
-      category:  document.getElementById('g-category').value,
-      water:     document.getElementById('g-water').value,
-      condition: document.getElementById('g-condition').value,
-      species:   document.getElementById('g-species').value.trim(),
-      consumable: consumableOn,
-      qty:       consumableOn ? qty : 0,
-      unit:      consumableOn ? document.getElementById('g-unit').value.trim() : '',
-      threshold: consumableOn && thresholdRaw ? Math.max(0, parseFloat(thresholdRaw) || 0) : 0,
-      price:     priceRaw ? parseFloat(priceRaw) : null,
-      purchased: document.getElementById('g-date').value,
-      link:      document.getElementById('g-link').value.trim(),
-      notes:     document.getElementById('g-notes').value.trim(),
-    };
-
-    let saved;
-    if (editingGearId) {
-      const idx = gear.findIndex(g => g.id === editingGearId);
-      saved = { ...gear[idx], ...item };
-      if (idx !== -1) gear[idx] = saved;
-    } else {
-      saved = { id: uid(), ...item };
-      gear.push(saved);
-    }
-
-    syncGear(saved);
-    closeGearModal();
-    renderGear();
-  }
-
   // ── Catch Modal ───────────────────────────────────────────────────────────
   function openCatchModal(id) {
     editingCatchId = id || null;
@@ -2122,12 +1739,10 @@
       catchIsPublic = c.isPublic !== false;
       renderFishList();
       setVisibility(catchIsPublic);
-      renderGearPicker(c.gearIds || []);
     } else {
       document.getElementById('catch-modal-title').textContent = 'Log Catch';
       document.getElementById('c-date').value = today();
       pendingLat = pendingLng = null;
-      renderGearPicker([]);
     }
 
     document.getElementById('catch-overlay').classList.add('open');
@@ -2150,42 +1765,12 @@
     document.getElementById('c-date').value    = today();
     document.getElementById('c-weather').value = '';
     document.getElementById('c-clarity').value = '';
-    document.getElementById('gear-search').value = '';
     removeCatchPhoto();
     clearErr('fg-cdate');
     pendingFish = [{ species: '', weight: '', weightUnit: 'lb', length: '', lengthUnit: 'in' }];
     catchIsPublic = true;
     renderFishList();
     setVisibility(true);
-  }
-
-  function renderGearPicker(selectedIds) {
-    const search = document.getElementById('gear-search').value.toLowerCase();
-    const list = document.getElementById('gear-picker-list');
-    const filtered = gear.filter(g => !search || g.name.toLowerCase().includes(search) || (g.brand||'').toLowerCase().includes(search));
-    if (filtered.length === 0) {
-      list.innerHTML = `<div class="gear-picker-empty">${gear.length === 0 ? 'No gear added yet. Add gear first.' : 'No results.'}</div>`;
-      return;
-    }
-    list.innerHTML = filtered.map(g => {
-      const checked = selectedIds.includes(g.id);
-      return `<label class="gear-pick-item">
-        <input type="checkbox" value="${g.id}" ${checked ? 'checked' : ''} />
-        <div>
-          <div class="gear-pick-label">${esc(g.name)}</div>
-          <div class="gear-pick-sub">${catLabel(g.category)}${g.brand ? ' &bull; ' + esc(g.brand) : ''}</div>
-        </div>
-      </label>`;
-    }).join('');
-  }
-
-  function filterGearPicker() {
-    const checkedIds = [...document.querySelectorAll('#gear-picker-list input[type=checkbox]:checked')].map(cb => cb.value);
-    renderGearPicker(checkedIds);
-  }
-
-  function getCheckedGearIds() {
-    return [...document.querySelectorAll('#gear-picker-list input[type=checkbox]:checked')].map(cb => cb.value);
   }
 
   function saveCatch() {
@@ -2208,7 +1793,6 @@
       location: document.getElementById('c-location').value.trim(),
       weather:  document.getElementById('c-weather').value,
       clarity:  document.getElementById('c-clarity').value,
-      gearIds:  getCheckedGearIds(),
       notes:    document.getElementById('c-notes').value.trim(),
       lat:      pendingLat,
       lng:      pendingLng,
@@ -2235,7 +1819,7 @@
   function openDeleteConfirm(type, id, name) {
     deletingType = type;
     deletingId   = id;
-    document.getElementById('confirm-title').textContent = type === 'gear' ? 'Delete Gear Item' : 'Delete Catch';
+    document.getElementById('confirm-title').textContent = 'Delete Catch';
     document.getElementById('confirm-name').textContent  = name;
     document.getElementById('confirm-overlay').classList.add('open');
   }
@@ -2248,10 +1832,8 @@
   function confirmDelete() {
     const type = deletingType;
     const id   = deletingId;
-    if (type === 'gear')  { gear    = gear.filter(g => g.id !== id);    removeGear(id);  }
     if (type === 'catch') { catches = catches.filter(c => c.id !== id); removeCatch(id); }
     closeConfirm();
-    if (type === 'gear')  renderGear();
     if (type === 'catch') renderCatches();
     if (currentView === 'dashboard') renderDashboard();
   }
@@ -2566,15 +2148,14 @@
     // Load catch counts for each followed user
     const stats = await Promise.all(followingList.map(async u => {
       try {
-        const [cs, gs, fs] = await Promise.all([
+        const [cs, fs] = await Promise.all([
           db.collection(`users/${u}/catches`).get(),
-          db.collection(`users/${u}/gear`).get(),
           db.collection(`users/${u}/followers`).get()
         ]);
         const catchDocs = cs.docs.map(d => d.data());
         const species = [...new Set(catchDocs.flatMap(c => getCatchFish(c).map(f => f.species)).filter(Boolean))];
-        return { username: u, catches: cs.size, gear: gs.size, followers: fs.size, species };
-      } catch { return { username: u, catches: 0, gear: 0, followers: 0, species: [] }; }
+        return { username: u, catches: cs.size, followers: fs.size, species };
+      } catch { return { username: u, catches: 0, followers: 0, species: [] }; }
     }));
 
     // Load profile pics for followed users
@@ -2586,7 +2167,7 @@
         ${avatarHTML(s.username, pic, 42)}
         <div class="user-info">
           <div class="user-name">${esc(s.username)}</div>
-          <div class="user-meta">${s.catches} catch${s.catches !== 1 ? 'es' : ''} &bull; ${s.gear} gear &bull; ${s.followers} follower${s.followers !== 1 ? 's' : ''}${s.species.length ? '<br>' + s.species.slice(0,3).join(', ') : ''}</div>
+          <div class="user-meta">${s.catches} catch${s.catches !== 1 ? 'es' : ''} &bull; ${s.followers} follower${s.followers !== 1 ? 's' : ''}${s.species.length ? '<br>' + s.species.slice(0,3).join(', ') : ''}</div>
         </div>
         <div class="user-actions">
           <button class="btn btn-ghost btn-sm" onclick="viewUserStats('${esc(s.username)}')">Stats</button>
@@ -2621,14 +2202,12 @@
 
     try {
       await loadProfilePic(username);
-      const [gearSnap, catchSnap, followerSnap, followingSnap] = await Promise.all([
-        db.collection(`users/${username}/gear`).get(),
+      const [catchSnap, followerSnap, followingSnap] = await Promise.all([
         db.collection(`users/${username}/catches`).get(),
         db.collection(`users/${username}/followers`).get(),
         db.collection(`users/${username}/following`).get()
       ]);
 
-      const uGear    = gearSnap.docs.map(d => d.data());
       const uCatches = catchSnap.docs.map(d => d.data());
       const followerCount  = followerSnap.size;
       const followingCount = followingSnap.size;
@@ -2636,11 +2215,6 @@
       const speciesMap = {};
       uCatches.forEach(c => { getCatchFish(c).forEach(f => { if (f.species) speciesMap[f.species] = (speciesMap[f.species] || 0) + 1; }); });
       const speciesList = Object.entries(speciesMap).sort((a,b) => b[1]-a[1]);
-
-      const gearPerf = uGear.map(g => {
-        const count = uCatches.filter(c => c.gearIds && c.gearIds.includes(g.id)).length;
-        return { g, count };
-      }).filter(x => x.count > 0).sort((a,b) => b.count - a.count);
 
       const allFishU = uCatches.flatMap(c => getCatchFish(c).map(f => ({ ...f, date: c.date, location: c.location })));
       const biggest = allFishU.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight).slice(0,3);
@@ -2657,7 +2231,6 @@
       profilePostsMap = Object.fromEntries(profilePosts.map(c => [c.id, c]));
       await loadFeedInteractions(profilePosts);
       const maxSp   = speciesList[0]?.[1] || 1;
-      const maxGear = gearPerf[0]?.count || 1;
       const isFollowing = followingList.includes(username);
 
       document.getElementById('user-stats-body').innerHTML = `
@@ -2697,8 +2270,8 @@
         <div class="stats-grid">
           <div class="stat-card"><div class="val">${uCatches.length}</div><div class="lbl">Catches</div></div>
           <div class="stat-card"><div class="val">${speciesList.length}</div><div class="lbl">Species</div></div>
-          <div class="stat-card"><div class="val">${uGear.length}</div><div class="lbl">Gear Items</div></div>
           <div class="stat-card"><div class="val">${uCatches.filter(c=>c.water==='fresh').length}</div><div class="lbl">Freshwater</div></div>
+          <div class="stat-card"><div class="val">${uCatches.filter(c=>c.water==='salt').length}</div><div class="lbl">Saltwater</div></div>
         </div>
 
         ${speciesList.length > 0 ? `
@@ -2708,16 +2281,6 @@
             <div class="perf-row">
               <div class="perf-header"><span class="perf-label">${esc(sp)}</span><span class="perf-val">${count} catch${count!==1?'es':''}</span></div>
               <div class="bar-bg"><div class="bar-fill green" style="width:${Math.round((count/maxSp)*100)}%"></div></div>
-            </div>`).join('')}
-        </div>` : ''}
-
-        ${gearPerf.length > 0 ? `
-        <div class="card">
-          <div class="sec-header"><span class="sec-title">Top Gear</span></div>
-          ${gearPerf.slice(0,5).map(({g, count}) => `
-            <div class="perf-row">
-              <div class="perf-header"><span class="perf-label">${esc(g.name)}</span><span class="perf-val">${count} catch${count!==1?'es':''}</span></div>
-              <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((count/maxGear)*100)}%"></div></div>
             </div>`).join('')}
         </div>` : ''}
 
@@ -2852,6 +2415,113 @@
       setBusy('profile-email-save-btn', false, 'Save');
       errEl.textContent = 'Failed to save. Try again.';
     }
+  }
+
+  // ── Reel Talk messaging ───────────────────────────────────────────────────
+  function convId(userA, userB) {
+    return [userA.toLowerCase(), userB.toLowerCase()].sort().join('__');
+  }
+
+  async function loadConversations() {
+    const el = document.getElementById('rt-conv-list');
+    if (!el) return;
+    el.innerHTML = `<div class="empty"><div class="spinner"></div></div>`;
+    try {
+      const snap = await db.collection('reelTalk')
+        .where('participants', 'array-contains', activeUser.toLowerCase())
+        .orderBy('lastAt', 'desc')
+        .get();
+      if (snap.empty) {
+        el.innerHTML = `<div class="empty"><div class="icon">💬</div><strong>No conversations yet</strong><p>Search for an angler above to start chatting.</p></div>`;
+        return;
+      }
+      el.innerHTML = snap.docs.map(d => {
+        const data = d.data();
+        const other = data.participants.find(p => p.toLowerCase() !== activeUser.toLowerCase()) || '';
+        const preview = data.lastMessage ? `${data.lastFrom === activeUser.toLowerCase() ? 'You: ' : ''}${esc(data.lastMessage)}` : 'No messages yet';
+        return `<div class="rt-conv-item" onclick="openConv('${esc(other)}')">
+          <div class="rt-conv-name">${esc(other)}</div>
+          <div class="rt-conv-preview">${preview}</div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = `<div class="empty"><strong>Failed to load conversations</strong></div>`;
+    }
+  }
+
+  async function startNewConv() {
+    const other = document.getElementById('rt-new-user').value.trim();
+    if (!other) return;
+    if (other.toLowerCase() === activeUser.toLowerCase()) { alert('You cannot message yourself.'); return; }
+    try {
+      const doc = await db.collection('usernames').doc(other.toLowerCase()).get();
+      if (!doc.exists) { alert(`User "${other}" not found.`); return; }
+      document.getElementById('rt-new-user').value = '';
+      openConv(doc.data().username);
+    } catch(e) {
+      alert('Could not find user. Try again.');
+    }
+  }
+
+  function openConv(otherUsername) {
+    if (rtUnsubscribe) { rtUnsubscribe(); rtUnsubscribe = null; }
+    activeConvId = convId(activeUser, otherUsername);
+    document.getElementById('rt-conv-list-wrap').style.display = 'none';
+    document.getElementById('rt-chat-wrap').style.display = 'block';
+    document.getElementById('rt-chat-title').textContent = otherUsername;
+    document.getElementById('rt-messages').innerHTML = `<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:12px">Loading…</div>`;
+    rtUnsubscribe = db.collection(`reelTalk/${activeConvId}/messages`)
+      .orderBy('createdAt', 'asc')
+      .onSnapshot(snap => {
+        const el = document.getElementById('rt-messages');
+        if (!el) return;
+        if (snap.empty) {
+          el.innerHTML = `<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:12px">No messages yet. Say hi! 👋</div>`;
+          return;
+        }
+        el.innerHTML = snap.docs.map(d => {
+          const m = d.data();
+          const mine = m.from.toLowerCase() === activeUser.toLowerCase();
+          return `<div class="rt-bubble-wrap ${mine ? 'mine' : 'theirs'}">
+            <div class="rt-bubble ${mine ? 'mine' : 'theirs'}">${esc(m.body)}</div>
+            <div class="rt-time">${m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : ''}</div>
+          </div>`;
+        }).join('');
+        el.scrollTop = el.scrollHeight;
+      }, () => {});
+    document.getElementById('rt-input').focus();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('rt-input');
+    const body = input.value.trim();
+    if (!body || !activeConvId) return;
+    input.value = '';
+    const now = new Date().toISOString();
+    const otherUsername = document.getElementById('rt-chat-title').textContent;
+    const batch = db.batch();
+    const convRef = db.doc(`reelTalk/${activeConvId}`);
+    const msgRef = db.collection(`reelTalk/${activeConvId}/messages`).doc();
+    batch.set(msgRef, { from: activeUser.toLowerCase(), body, createdAt: now });
+    batch.set(convRef, {
+      participants: [activeUser.toLowerCase(), otherUsername.toLowerCase()],
+      lastMessage: body,
+      lastAt: now,
+      lastFrom: activeUser.toLowerCase()
+    }, { merge: true });
+    try {
+      await batch.commit();
+    } catch(e) {
+      input.value = body;
+    }
+  }
+
+  function closeChat() {
+    if (rtUnsubscribe) { rtUnsubscribe(); rtUnsubscribe = null; }
+    activeConvId = null;
+    document.getElementById('rt-chat-wrap').style.display = 'none';
+    document.getElementById('rt-conv-list-wrap').style.display = 'block';
+    loadConversations();
   }
 
   // ── People tab switching ───────────────────────────────────────────────────
@@ -3217,10 +2887,6 @@
   }
 
   // ── Keyboard ──────────────────────────────────────────────────────────────
-  document.getElementById('gear-overlay').addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeGearModal(); return; }
-    if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); saveGear(); }
-  });
   document.getElementById('catch-overlay').addEventListener('keydown', e => {
     if (e.key === 'Escape') { closeCatchModal(); return; }
     if (e.key === 'Enter' && e.target.tagName !== 'BUTTON' && e.target.type !== 'checkbox') { e.preventDefault(); saveCatch(); }
@@ -3246,10 +2912,10 @@
   });
 
   // Close overlays on backdrop click
-  ['gear-overlay','catch-overlay','confirm-overlay'].forEach(id => {
+  ['catch-overlay','confirm-overlay'].forEach(id => {
     document.getElementById(id).addEventListener('click', e => {
       if (e.target === e.currentTarget) {
-        closeGearModal(); closeCatchModal(); closeConfirm();
+        closeCatchModal(); closeConfirm();
       }
     });
   });
