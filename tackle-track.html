@@ -936,9 +936,12 @@
         <span class="sec-title">Reel Talk</span>
       </div>
       <!-- new conversation row -->
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <input type="text" id="rt-new-user" placeholder="Start chat with username…" autocomplete="off" autocapitalize="none" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.9rem;font-family:inherit;outline:none;background:var(--surface);color:var(--text);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
-        <button class="btn btn-primary" onclick="startNewConv()">Chat</button>
+      <div style="margin-bottom:16px">
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <input type="text" id="rt-new-user" placeholder="Start chat with username…" autocomplete="off" autocapitalize="none" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.9rem;font-family:inherit;outline:none;background:var(--surface);color:var(--text);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
+          <button class="btn btn-primary" onclick="startNewConv()">Chat</button>
+        </div>
+        <div id="rt-user-suggestions"></div>
       </div>
       <div id="rt-conv-list"><div class="empty"><div class="spinner"></div></div></div>
     </div>
@@ -2449,6 +2452,24 @@
     }
   }
 
+  async function searchRTUsers() {
+    const query = document.getElementById('rt-new-user').value.trim().toLowerCase();
+    const el = document.getElementById('rt-user-suggestions');
+    if (!query) { el.innerHTML = ''; return; }
+    try {
+      const snap = await db.collection('usernames')
+        .where('usernameLower', '>=', query)
+        .where('usernameLower', '<=', query + '\uf8ff')
+        .limit(5).get();
+      const results = snap.docs.map(d => d.data().username).filter(u => u.toLowerCase() !== activeUser.toLowerCase());
+      if (results.length === 0) { el.innerHTML = ''; return; }
+      el.innerHTML = results.map(u => `
+        <div class="rt-conv-item" style="margin-bottom:4px" onclick="document.getElementById('rt-new-user').value='';document.getElementById('rt-user-suggestions').innerHTML='';openConv('${esc(u)}')">
+          <div class="rt-conv-name">${esc(u)}</div>
+        </div>`).join('');
+    } catch(e) { el.innerHTML = ''; }
+  }
+
   async function startNewConv() {
     const other = document.getElementById('rt-new-user').value.trim();
     if (!other) return;
@@ -2457,6 +2478,7 @@
       const doc = await db.collection('usernames').doc(other.toLowerCase()).get();
       if (!doc.exists) { alert(`User "${other}" not found.`); return; }
       document.getElementById('rt-new-user').value = '';
+      document.getElementById('rt-user-suggestions').innerHTML = '';
       openConv(doc.data().username);
     } catch(e) {
       alert('Could not find user. Try again.');
@@ -2499,18 +2521,17 @@
     input.value = '';
     const now = new Date().toISOString();
     const otherUsername = document.getElementById('rt-chat-title').textContent;
-    const batch = db.batch();
     const convRef = db.doc(`reelTalk/${activeConvId}`);
     const msgRef = db.collection(`reelTalk/${activeConvId}/messages`).doc();
-    batch.set(msgRef, { from: activeUser.toLowerCase(), body, createdAt: now });
-    batch.set(convRef, {
-      participants: [activeUser.toLowerCase(), otherUsername.toLowerCase()],
-      lastMessage: body,
-      lastAt: now,
-      lastFrom: activeUser.toLowerCase()
-    }, { merge: true });
     try {
-      await batch.commit();
+      // Write conv doc first so it exists when message security rule evaluates
+      await convRef.set({
+        participants: [activeUser.toLowerCase(), otherUsername.toLowerCase()],
+        lastMessage: body,
+        lastAt: now,
+        lastFrom: activeUser.toLowerCase()
+      }, { merge: true });
+      await msgRef.set({ from: activeUser.toLowerCase(), body, createdAt: now });
     } catch(e) {
       input.value = body;
     }
@@ -2902,6 +2923,15 @@
   });
   document.getElementById('people-search').addEventListener('keydown', e => {
     if (e.key === 'Enter') { clearTimeout(peopleSearchTimer); searchUsers(); }
+  });
+
+  let rtSearchTimer;
+  document.getElementById('rt-new-user').addEventListener('input', () => {
+    clearTimeout(rtSearchTimer);
+    rtSearchTimer = setTimeout(searchRTUsers, 300);
+  });
+  document.getElementById('rt-new-user').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { clearTimeout(rtSearchTimer); startNewConv(); }
   });
 
   document.getElementById('user-stats-overlay').addEventListener('click', e => {
