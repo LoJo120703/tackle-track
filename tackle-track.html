@@ -2616,6 +2616,9 @@
       const biggest = allFishU.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight).slice(0,3);
 
       const isSelf = username.toLowerCase() === activeUser.toLowerCase();
+      const currentEmail = isSelf
+        ? (auth.currentUser?.email?.endsWith('@tackletrack.app') ? null : auth.currentUser?.email)
+        : null;
       const profilePosts = uCatches
         .filter(c => isSelf || c.isPublic !== false)
         .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
@@ -2640,6 +2643,24 @@
                 : `<button class="btn btn-sm btn-follow" onclick="followUser('${esc(username)}')">Follow</button>`}
           </div>
         </div>
+
+        ${isSelf ? `
+        <div class="card" style="margin-bottom:14px">
+          <div class="sec-header" style="margin-bottom:8px"><span class="sec-title">Account Email</span></div>
+          <div id="profile-email-display">
+            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:10px">${currentEmail ? esc(currentEmail) : 'No recovery email on file'}</div>
+            <button class="btn btn-ghost btn-sm" onclick="showEmailEditForm()">${currentEmail ? 'Change Email' : 'Add Email'}</button>
+          </div>
+          <div id="profile-email-form" style="display:none">
+            <input type="email" id="profile-new-email" placeholder="New email address" style="width:100%;margin-bottom:8px" />
+            <input type="password" id="profile-email-password" placeholder="Current password to confirm" style="width:100%;margin-bottom:8px" />
+            <div id="profile-email-error" style="font-size:0.82rem;color:var(--danger);margin-bottom:8px"></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="hideEmailEditForm()">Cancel</button>
+              <button class="btn btn-primary btn-sm" id="profile-email-save-btn" onclick="saveProfileEmail()">Save</button>
+            </div>
+          </div>
+        </div>` : ''}
 
         <div class="stats-grid">
           <div class="stat-card"><div class="val">${uCatches.length}</div><div class="lbl">Catches</div></div>
@@ -2734,6 +2755,43 @@
 
   function closeUserStats() {
     document.getElementById('user-stats-overlay').classList.remove('open');
+  }
+
+  function showEmailEditForm() {
+    document.getElementById('profile-email-display').style.display = 'none';
+    document.getElementById('profile-email-form').style.display = 'block';
+    document.getElementById('profile-new-email').focus();
+  }
+
+  function hideEmailEditForm() {
+    document.getElementById('profile-email-form').style.display = 'none';
+    document.getElementById('profile-email-display').style.display = 'block';
+    document.getElementById('profile-email-error').textContent = '';
+  }
+
+  async function saveProfileEmail() {
+    const newEmail = document.getElementById('profile-new-email').value.trim();
+    const password = document.getElementById('profile-email-password').value;
+    const errEl    = document.getElementById('profile-email-error');
+    errEl.textContent = '';
+    if (!newEmail || !newEmail.includes('@')) { errEl.textContent = 'Enter a valid email address.'; return; }
+    if (!password) { errEl.textContent = 'Enter your current password to confirm.'; return; }
+    setBusy('profile-email-save-btn', true, 'Saving…');
+    try {
+      const currentAuthEmail = auth.currentUser.email;
+      const credential = firebase.auth.EmailAuthProvider.credential(currentAuthEmail, password);
+      await auth.currentUser.reauthenticateWithCredential(credential);
+      await auth.currentUser.updateEmail(newEmail);
+      await db.collection('usernames').doc(activeUser.toLowerCase()).set({ email: newEmail }, { merge: true });
+      closeUserStats();
+      viewUserStats(activeUser);
+    } catch (e) {
+      setBusy('profile-email-save-btn', false, 'Save');
+      if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') errEl.textContent = 'Incorrect password.';
+      else if (e.code === 'auth/email-already-in-use') errEl.textContent = 'That email is already in use.';
+      else if (e.code === 'auth/invalid-email') errEl.textContent = 'Invalid email address.';
+      else errEl.textContent = `Failed. (${e.code})`;
+    }
   }
 
   // ── People tab switching ───────────────────────────────────────────────────
