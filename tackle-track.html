@@ -1455,11 +1455,14 @@
     document.getElementById('login-signin-panel').style.display  = mode === 'signin'  ? 'block' : 'none';
     document.getElementById('login-create-panel').style.display  = mode === 'create'  ? 'block' : 'none';
     document.getElementById('login-forgot-panel').style.display  = mode === 'forgot'  ? 'block' : 'none';
-    document.getElementById('login-email').style.display         = mode === 'create'  ? 'block' : 'none';
+    document.getElementById('login-username').style.display      = mode === 'forgot'  ? 'none'  : 'block';
+    const emailEl = document.getElementById('login-email');
+    emailEl.style.display    = (mode === 'create' || mode === 'forgot') ? 'block' : 'none';
+    emailEl.placeholder      = mode === 'forgot' ? 'Email address' : 'Email (used for password reset)';
     document.getElementById('login-password').style.display      = mode === 'forgot'  ? 'none'  : 'block';
-    if (mode === 'forgot') document.getElementById('login-username').focus();
+    if (mode === 'forgot') emailEl.focus();
     else if (mode === 'create' && document.getElementById('login-username').value.trim())
-      document.getElementById('login-email').focus();
+      emailEl.focus();
   }
 
   async function signIn() {
@@ -1530,23 +1533,16 @@
   }
 
   async function sendPasswordReset() {
-    const username = document.getElementById('login-username').value.trim();
-    if (!username) { showLoginError('Please enter your username.'); return; }
+    const email = document.getElementById('login-email').value.trim();
+    if (!email) { showLoginError('Please enter your email address.'); return; }
     hideLoginMessages();
     setBusy('login-reset-btn', true, 'Sending…');
     try {
-      const doc = await db.collection('usernames').doc(username.toLowerCase()).get();
-      if (!doc.exists) { showLoginError('Username not found.'); setBusy('login-reset-btn', false, 'Send Reset Email'); return; }
-      const email = doc.data().email;
-      if (!email || email.endsWith('@tackletrack.app')) {
-        showLoginError('No recovery email on file. Create a new account to enable password reset.');
-        setBusy('login-reset-btn', false, 'Send Reset Email');
-        return;
-      }
       await auth.sendPasswordResetEmail(email);
       showLoginSuccess(`Reset link sent! Check your inbox — if you don't see it, check your spam/junk folder.`);
     } catch (e) {
-      showLoginError(`Failed to send reset email. (${e.code})`);
+      if (e.code === 'auth/user-not-found') showLoginError('No account found with that email address.');
+      else showLoginError(`Failed to send reset email. (${e.code})`);
     }
     setBusy('login-reset-btn', false, 'Send Reset Email');
   }
@@ -3202,12 +3198,13 @@
   document.getElementById('login-username').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('login-email').style.display !== 'none'
       ? document.getElementById('login-email').focus()
-      : document.getElementById('login-password').style.display !== 'none'
-        ? document.getElementById('login-password').focus()
-        : sendPasswordReset();
+      : document.getElementById('login-password').focus();
   });
   document.getElementById('login-email').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('login-password').focus();
+    if (e.key !== 'Enter') return;
+    document.getElementById('login-forgot-panel').style.display !== 'none'
+      ? sendPasswordReset()
+      : document.getElementById('login-password').focus();
   });
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('login-create-panel').style.display !== 'none' ? createAccount() : signIn();
