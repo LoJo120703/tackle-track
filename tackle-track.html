@@ -1354,6 +1354,7 @@
   let peopleSearchResults = [];
   let profilePostsMap = {};   // catchId → catch object for the currently-viewed profile
   let profilePostsUser = null;
+  let selfPostsMap = {};      // catchId → own public catches
   let pendingCatchPhotoURL = null;
   let profilePicCache = {};
   let pendingFish = [];
@@ -1805,6 +1806,9 @@
       return;
     }
 
+    selfPostsMap = {};
+    catches.filter(c => c.isPublic !== false).forEach(c => { selfPostsMap[c.id] = { ...c, _author: activeUser }; });
+
     el.innerHTML = filtered.map(c => {
       const gearNames = (c.gearIds || []).map(id => gear.find(g => g.id === id)?.name).filter(Boolean);
       const fish = getCatchFish(c);
@@ -1833,6 +1837,7 @@
         </div>
         ${c.notes ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:8px">${esc(c.notes)}</div>` : ''}
         <div class="card-actions">
+          ${c.isPublic !== false ? `<button class="btn btn-ghost btn-sm" onclick="openPostDetail('${esc(activeUser)}','${c.id}')">💬 Comments</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="duplicateCatch('${c.id}')">Duplicate</button>
           <button class="btn btn-ghost btn-sm" onclick="openCatchModal('${c.id}')">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="openDeleteConfirm('catch','${c.id}','${esc(primarySpecies)} on ${esc(fmtDate(c.date))}')">Delete</button>
@@ -2771,7 +2776,7 @@
   }
 
   async function openPostDetail(username, catchId) {
-    const c = profilePostsMap[catchId];
+    const c = profilePostsMap[catchId] || selfPostsMap[catchId];
     if (!c) return;
     const fish = getCatchFish(c);
     const bigFish = fish.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight)[0];
