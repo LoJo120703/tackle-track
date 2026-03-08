@@ -2510,7 +2510,10 @@
           </div>`;
         }).join('');
         el.scrollTop = el.scrollHeight;
-      }, () => {});
+      }, err => {
+        const el = document.getElementById('rt-messages');
+        if (el) el.innerHTML = `<div style="color:var(--danger);font-size:0.83rem;text-align:center;padding:12px">Could not load messages. Check your connection.</div>`;
+      });
     document.getElementById('rt-input').focus();
   }
 
