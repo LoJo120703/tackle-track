@@ -2534,6 +2534,13 @@
 
       const allFishU = uCatches.flatMap(c => getCatchFish(c).map(f => ({ ...f, date: c.date, location: c.location })));
       const biggest = allFishU.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight).slice(0,3);
+
+      const isSelf = username.toLowerCase() === activeUser.toLowerCase();
+      const profilePosts = uCatches
+        .filter(c => isSelf || c.isPublic !== false)
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+        .map(c => ({ ...c, _author: username }));
+      await loadFeedInteractions(profilePosts);
       const maxSp   = speciesList[0]?.[1] || 1;
       const maxGear = gearPerf[0]?.count || 1;
       const isFollowing = followingList.includes(username);
@@ -2594,6 +2601,51 @@
               <div class="catch-weight">${c.weight} ${esc(c.weightUnit||'lb')}</div>
             </div>`).join('')}
         </div>` : ''}
+
+        ${profilePosts.length > 0 ? `
+        <div class="sec-header" style="margin-top:4px">
+          <span class="sec-title">Posts</span>
+          <span style="font-size:0.82rem;color:var(--muted)">${profilePosts.length}</span>
+        </div>
+        ${profilePosts.map(c => {
+          const fish = getCatchFish(c);
+          const bigFish = fish.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight)[0];
+          const fishLine = fish.map(f => esc(f.species || 'Unknown')).join(', ');
+          const key = catchKey(username, c.id);
+          const details = [
+            bigFish ? `<span class="feed-weight">${bigFish.weight} ${esc(bigFish.weightUnit||'lb')}</span>` : null,
+            bigFish?.length ? `${bigFish.length} ${esc(bigFish.lengthUnit||'in')}` : null,
+            c.location ? `📍 ${esc(c.location)}` : null,
+            c.weather ? weatherLabel(c.weather) : null,
+          ].filter(Boolean).join(' &bull; ');
+          return `<div class="feed-card">
+            ${c.photoURL ? `<img src="${esc(c.photoURL)}" class="feed-photo" alt="${esc(fish[0]?.species||'')}" />` : ''}
+            <div class="feed-body" style="padding-top:12px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+                <div class="feed-species">🐟 ${fishLine}${fish.length > 1 ? ` <span style="font-size:0.8rem;color:var(--muted)">(${fish.length})</span>` : ''}</div>
+                <div style="font-size:0.72rem;color:var(--muted);white-space:nowrap;margin-left:8px">${fmtDate(c.date)}</div>
+              </div>
+              ${details ? `<div class="feed-detail">${details}</div>` : ''}
+              ${c.isPublic === false ? `<div style="font-size:0.75rem;color:var(--muted)">🔒 Private</div>` : ''}
+              ${c.notes ? `<div class="feed-notes">"${esc(c.notes)}"</div>` : ''}
+            </div>
+            <div class="feed-actions">
+              <button class="feed-action-btn${myLikes[key] ? ' liked' : ''}" id="like-btn-${c.id}" onclick="toggleLike('${esc(username)}','${c.id}')">
+                ${myLikes[key] ? '❤️' : '🤍'} ${likeCounts[key] || 0}
+              </button>
+              <button class="feed-action-btn" onclick="toggleComments('${esc(username)}','${c.id}')">
+                💬 <span id="comment-count-${c.id}">${commentCounts[key] || 0}</span>
+              </button>
+            </div>
+            <div class="feed-comments" id="comments-section-${c.id}" style="display:none">
+              <div class="comments-list" id="comments-list-${c.id}"></div>
+              <div class="comment-input-row">
+                <input type="text" id="comment-input-${c.id}" placeholder="Add a comment…" autocomplete="off" onkeydown="if(event.key==='Enter')addComment('${esc(username)}','${c.id}')" />
+                <button class="btn btn-primary btn-sm" onclick="addComment('${esc(username)}','${c.id}')">Post</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}` : ''}
       `;
     } catch (e) {
       document.getElementById('user-stats-body').innerHTML = `<div class="empty"><strong>Failed to load stats</strong><p>Try again.</p></div>`;
