@@ -1283,6 +1283,18 @@
   </div>
 </div>
 
+<!-- ── Post detail overlay ── -->
+<div class="overlay" id="post-detail-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 id="post-detail-title"></h2>
+      <button class="modal-close" onclick="closePostDetail()">&times;</button>
+    </div>
+    <div class="modal-body" id="post-detail-body"></div>
+  </div>
+</div>
+
 <!-- ── User stats overlay ── -->
 <div class="overlay" id="user-stats-overlay">
   <div class="modal">
@@ -1340,6 +1352,8 @@
   let pendingLng = null;
   let followingList = [];
   let peopleSearchResults = [];
+  let profilePostsMap = {};   // catchId → catch object for the currently-viewed profile
+  let profilePostsUser = null;
   let pendingCatchPhotoURL = null;
   let profilePicCache = {};
   let pendingFish = [];
@@ -2634,6 +2648,8 @@
         .filter(c => isSelf || c.isPublic !== false)
         .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
         .map(c => ({ ...c, _author: username }));
+      profilePostsUser = username;
+      profilePostsMap = Object.fromEntries(profilePosts.map(c => [c.id, c]));
       await loadFeedInteractions(profilePosts);
       const maxSp   = speciesList[0]?.[1] || 1;
       const maxGear = gearPerf[0]?.count || 1;
@@ -2730,7 +2746,7 @@
             c.location ? `📍 ${esc(c.location)}` : null,
             c.weather ? weatherLabel(c.weather) : null,
           ].filter(Boolean).join(' &bull; ');
-          return `<div class="feed-card">
+          return `<div class="feed-card" style="cursor:pointer" onclick="openPostDetail('${esc(username)}','${c.id}')">
             ${c.photoURL ? `<img src="${esc(c.photoURL)}" class="feed-photo" alt="${esc(fish[0]?.species||'')}" />` : ''}
             <div class="feed-body" style="padding-top:12px">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
@@ -2740,21 +2756,7 @@
               ${details ? `<div class="feed-detail">${details}</div>` : ''}
               ${c.isPublic === false ? `<div style="font-size:0.75rem;color:var(--muted)">🔒 Private</div>` : ''}
               ${c.notes ? `<div class="feed-notes">"${esc(c.notes)}"</div>` : ''}
-            </div>
-            <div class="feed-actions">
-              <button class="feed-action-btn${myLikes[key] ? ' liked' : ''}" id="like-btn-${c.id}" onclick="toggleLike('${esc(username)}','${c.id}')">
-                ${myLikes[key] ? '❤️' : '🤍'} ${likeCounts[key] || 0}
-              </button>
-              <button class="feed-action-btn" onclick="toggleComments('${esc(username)}','${c.id}')">
-                💬 <span id="comment-count-${c.id}">${commentCounts[key] || 0}</span>
-              </button>
-            </div>
-            <div class="feed-comments" id="comments-section-${c.id}" style="display:none">
-              <div class="comments-list" id="comments-list-${c.id}"></div>
-              <div class="comment-input-row">
-                <input type="text" id="comment-input-${c.id}" placeholder="Add a comment…" autocomplete="off" onkeydown="if(event.key==='Enter')addComment('${esc(username)}','${c.id}')" />
-                <button class="btn btn-primary btn-sm" onclick="addComment('${esc(username)}','${c.id}')">Post</button>
-              </div>
+              <div style="font-size:0.75rem;color:var(--muted);margin-top:6px">❤️ ${likeCounts[key] || 0} &bull; 💬 ${commentCounts[key] || 0}</div>
             </div>
           </div>`;
         }).join('')}` : ''}
@@ -2766,6 +2768,57 @@
 
   function closeUserStats() {
     document.getElementById('user-stats-overlay').classList.remove('open');
+  }
+
+  async function openPostDetail(username, catchId) {
+    const c = profilePostsMap[catchId];
+    if (!c) return;
+    const fish = getCatchFish(c);
+    const bigFish = fish.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight)[0];
+    const fishLine = fish.map(f => esc(f.species || 'Unknown')).join(', ');
+    const key = catchKey(username, catchId);
+    const details = [
+      bigFish ? `<span class="feed-weight">${bigFish.weight} ${esc(bigFish.weightUnit||'lb')}</span>` : null,
+      bigFish?.length ? `${bigFish.length} ${esc(bigFish.lengthUnit||'in')}` : null,
+      c.location ? `📍 ${esc(c.location)}` : null,
+      c.weather ? weatherLabel(c.weather) : null,
+      c.clarity ? clarityLabel(c.clarity) : null,
+    ].filter(Boolean).join(' &bull; ');
+
+    document.getElementById('post-detail-title').textContent = username;
+    document.getElementById('post-detail-body').innerHTML = `
+      <div class="feed-card" style="margin:0;border:none;box-shadow:none">
+        ${c.photoURL ? `<img src="${esc(c.photoURL)}" class="feed-photo" alt="${esc(fish[0]?.species||'')}" />` : ''}
+        <div class="feed-body" style="padding-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+            <div class="feed-species">🐟 ${fishLine}${fish.length > 1 ? ` <span style="font-size:0.8rem;color:var(--muted)">(${fish.length})</span>` : ''}</div>
+            <div style="font-size:0.72rem;color:var(--muted);white-space:nowrap;margin-left:8px">${fmtDate(c.date)}</div>
+          </div>
+          ${details ? `<div class="feed-detail">${details}</div>` : ''}
+          ${c.notes ? `<div class="feed-notes">"${esc(c.notes)}"</div>` : ''}
+        </div>
+        <div class="feed-actions">
+          <button class="feed-action-btn${myLikes[key] ? ' liked' : ''}" id="pd-like-btn-${catchId}" onclick="toggleLike('${esc(username)}','${catchId}')">
+            ${myLikes[key] ? '❤️' : '🤍'} <span id="pd-like-count-${catchId}">${likeCounts[key] || 0}</span>
+          </button>
+          <button class="feed-action-btn" onclick="toggleComments('${esc(username)}','${catchId}')">
+            💬 <span id="comment-count-${catchId}">${commentCounts[key] || 0}</span>
+          </button>
+        </div>
+        <div class="feed-comments" id="comments-section-${catchId}" style="display:none">
+          <div class="comments-list" id="comments-list-${catchId}"></div>
+          <div class="comment-input-row">
+            <input type="text" id="comment-input-${catchId}" placeholder="Add a comment…" autocomplete="off" onkeydown="if(event.key==='Enter')addComment('${esc(username)}','${catchId}')" />
+            <button class="btn btn-primary btn-sm" onclick="addComment('${esc(username)}','${catchId}')">Post</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('post-detail-overlay').classList.add('open');
+  }
+
+  function closePostDetail() {
+    document.getElementById('post-detail-overlay').classList.remove('open');
   }
 
   function showEmailEditForm() {
@@ -2846,10 +2899,12 @@
   }
 
   function updateLikeBtn(catchId, key) {
-    const btn = document.getElementById(`like-btn-${catchId}`);
-    if (!btn) return;
-    btn.className = `feed-action-btn${myLikes[key] ? ' liked' : ''}`;
-    btn.innerHTML = `${myLikes[key] ? '❤️' : '🤍'} ${likeCounts[key] || 0}`;
+    for (const id of [`like-btn-${catchId}`, `pd-like-btn-${catchId}`]) {
+      const btn = document.getElementById(id);
+      if (!btn) continue;
+      btn.className = `feed-action-btn${myLikes[key] ? ' liked' : ''}`;
+      btn.innerHTML = `${myLikes[key] ? '❤️' : '🤍'} ${likeCounts[key] || 0}`;
+    }
   }
 
   function toggleComments(author, catchId) {
@@ -3180,6 +3235,9 @@
 
   document.getElementById('user-stats-overlay').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeUserStats();
+  });
+  document.getElementById('post-detail-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePostDetail();
   });
 
   // Close overlays on backdrop click
