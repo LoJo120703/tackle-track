@@ -2086,7 +2086,9 @@
   async function loadFollowing() {
     try {
       const snap = await db.collection(`users/${activeUser}/following`).get();
-      followingList = snap.docs.map(d => d.id);
+      const ids = snap.docs.map(d => d.id);
+      const userDocs = await Promise.all(ids.map(id => db.collection('usernames').doc(id.toLowerCase()).get()));
+      followingList = userDocs.map((doc, i) => doc.data()?.username || ids[i]);
     } catch (e) { followingList = []; }
   }
 
@@ -2442,9 +2444,14 @@
         el.innerHTML = `<div class="empty"><div class="icon">💬</div><strong>No conversations yet</strong><p>Search for an angler above to start chatting.</p></div>`;
         return;
       }
-      el.innerHTML = snap.docs.map(d => {
-        const data = d.data();
-        const other = (data.participantsDisplay || data.participants).find(p => p.toLowerCase() !== activeUser.toLowerCase()) || '';
+      // Resolve proper casing for each conversation partner
+      const convData = snap.docs.map(d => d.data());
+      const otherIds = convData.map(data =>
+        (data.participants || []).find(p => p !== activeUser.toLowerCase()) || ''
+      );
+      const userDocs = await Promise.all(otherIds.map(id => id ? db.collection('usernames').doc(id).get() : Promise.resolve(null)));
+      el.innerHTML = convData.map((data, i) => {
+        const other = userDocs[i]?.data()?.username || otherIds[i];
         const preview = data.lastMessage ? `${data.lastFrom === activeUser.toLowerCase() ? 'You: ' : ''}${esc(data.lastMessage)}` : 'No messages yet';
         return `<div class="rt-conv-item" onclick="openConv('${esc(other)}')">
           <div class="rt-conv-name">${esc(other)}</div>
