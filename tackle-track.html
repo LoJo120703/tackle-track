@@ -1544,7 +1544,7 @@
         return;
       }
       await auth.sendPasswordResetEmail(email);
-      showLoginSuccess(`Reset link sent! Check your inbox.`);
+      showLoginSuccess(`Reset link sent! Check your inbox — if you don't see it, check your spam/junk folder.`);
     } catch (e) {
       showLoginError(`Failed to send reset email. (${e.code})`);
     }
