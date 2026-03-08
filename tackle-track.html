@@ -3169,8 +3169,13 @@
     if (e.key === 'Escape') closeConfirm();
   });
 
+  let peopleSearchTimer;
+  document.getElementById('people-search').addEventListener('input', () => {
+    clearTimeout(peopleSearchTimer);
+    peopleSearchTimer = setTimeout(searchUsers, 300);
+  });
   document.getElementById('people-search').addEventListener('keydown', e => {
-    if (e.key === 'Enter') searchUsers();
+    if (e.key === 'Enter') { clearTimeout(peopleSearchTimer); searchUsers(); }
   });
 
   document.getElementById('user-stats-overlay').addEventListener('click', e => {
