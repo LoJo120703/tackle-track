@@ -915,6 +915,69 @@
     .wind-refresh-btn:hover { color: var(--accent); }
     .wind-refresh-btn svg { width: 13px; height: 13px; }
 
+    /* ── Tide widget ── */
+    .tide-next {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--accent-light);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .tide-table { display: flex; flex-direction: column; gap: 0; }
+    .tide-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.84rem;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tide-row:last-child { border-bottom: none; }
+    .tide-row.past { opacity: 0.42; }
+    .tide-type { font-weight: 700; font-size: 0.78rem; min-width: 68px; }
+    .tide-type.high { color: var(--accent); }
+    .tide-type.low  { color: var(--muted); }
+    .tide-time { flex: 1; }
+    .tide-ft   { font-weight: 700; }
+
+    /* ── Solunar widget ── */
+    .solunar-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .solunar-moon { display: flex; align-items: center; gap: 10px; }
+    .moon-emoji   { font-size: 2rem; line-height: 1; }
+    .solunar-period {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      margin-bottom: 4px;
+      background: var(--bg);
+    }
+    .solunar-period.sol-active { background: #dcfce7; }
+    .solunar-period.sol-past   { opacity: 0.45; }
+    .sp-label { font-weight: 700; font-size: 0.7rem; padding: 2px 7px; border-radius: 999px; flex-shrink: 0; }
+    .sp-label.major { background: var(--navy); color: white; }
+    .sp-label.minor { background: var(--border); color: var(--muted); }
+    .sp-time  { flex: 1; color: var(--text); }
+    .sp-now   { font-size: 0.67rem; font-weight: 800; color: var(--success); text-transform: uppercase; letter-spacing: .05em; }
+    .solunar-sun-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+
     /* ── Reel Talk ── */
     .rt-conv-item {
       background: var(--surface);
@@ -1030,6 +1093,21 @@
         </button>
       </div>
     </div>
+    <!-- Tides -->
+    <div class="wind-card" id="tide-widget" style="display:none">
+      <div class="wind-card-header">
+        <span class="wind-card-title">Tides Today</span>
+      </div>
+      <div id="tide-body"></div>
+    </div>
+    <!-- Solunar -->
+    <div class="wind-card" id="solunar-widget" style="display:none">
+      <div class="wind-card-header">
+        <span class="wind-card-title">Solunar &amp; Moon</span>
+      </div>
+      <div id="solunar-body"></div>
+    </div>
+
     <div class="sec-header">
       <span class="sec-title">Recent Catches</span>
       <button class="btn btn-ghost btn-sm" onclick="showView('catches')">View all</button>
@@ -1315,6 +1393,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.min.js"></script>
 <script>
   // ── State ─────────────────────────────────────────────────────────────────
   let catches = [];
@@ -1715,6 +1794,10 @@
     const CACHE_MS = 10 * 60 * 1000; // 10 minutes
     if (!force && windCache && (Date.now() - windCache.ts) < CACHE_MS) {
       renderWindWidget(windCache.data, windCache.location);
+      if (windCache.lat != null) {
+        renderSolunarWidget(windCache.lat, windCache.lng);
+        fetchTideData(windCache.lat, windCache.lng);
+      }
       return;
     }
 
@@ -1745,8 +1828,10 @@
         const res  = await fetch(url);
         const json = await res.json();
         const data = json.current;
-        windCache = { data, location: locationName, ts: Date.now() };
+        windCache = { data, location: locationName, lat, lng: lon, ts: Date.now() };
         renderWindWidget(data, locationName);
+        renderSolunarWidget(lat, lon);
+        fetchTideData(lat, lon);
       } catch (e) {
         if (body) body.innerHTML = '<div class="wind-loading">Could not load wind data. Check your connection.</div>';
         const mapLink = document.getElementById('wind-map-link');
@@ -1757,6 +1842,182 @@
       const mapLink = document.getElementById('wind-map-link');
       if (mapLink) mapLink.style.display = 'block';
     });
+  }
+
+  // ── Tides & Solunar ───────────────────────────────────────────────────────
+  function fmtTime(date) {
+    if (!date || isNaN(date.getTime())) return '—';
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function getMoonEmoji(phase) {
+    if (phase < 0.0625 || phase >= 0.9375) return '🌑';
+    if (phase < 0.1875) return '🌒';
+    if (phase < 0.3125) return '🌓';
+    if (phase < 0.4375) return '🌔';
+    if (phase < 0.5625) return '🌕';
+    if (phase < 0.6875) return '🌖';
+    if (phase < 0.8125) return '🌗';
+    return '🌘';
+  }
+
+  function moonPhaseName(phase) {
+    if (phase < 0.0625 || phase >= 0.9375) return 'New Moon';
+    if (phase < 0.1875) return 'Waxing Crescent';
+    if (phase < 0.3125) return 'First Quarter';
+    if (phase < 0.4375) return 'Waxing Gibbous';
+    if (phase < 0.5625) return 'Full Moon';
+    if (phase < 0.6875) return 'Waning Gibbous';
+    if (phase < 0.8125) return 'Last Quarter';
+    return 'Waning Crescent';
+  }
+
+  function solunarRating(phase) {
+    // 0=new, 0.5=full → peak; 0.25/0.75=quarters → weakest
+    const distFromPeak = Math.min(phase, Math.abs(phase - 0.5), 1 - phase);
+    if (distFromPeak < 0.04) return 4;
+    if (distFromPeak < 0.09) return 3;
+    if (distFromPeak < 0.18) return 2;
+    return 1;
+  }
+
+  function renderSolunarWidget(lat, lng) {
+    const el = document.getElementById('solunar-widget');
+    if (!el) return;
+    el.style.display = '';
+    const body = document.getElementById('solunar-body');
+    if (typeof SunCalc === 'undefined') {
+      body.innerHTML = '<div class="wind-loading">Solunar data unavailable.</div>';
+      return;
+    }
+
+    const now       = new Date();
+    const sunTimes  = SunCalc.getTimes(now, lat, lng);
+    const moonTimes = SunCalc.getMoonTimes(now, lat, lng);
+    const moonIllum = SunCalc.getMoonIllumination(now);
+    const phase     = moonIllum.phase;
+    const illum     = Math.round(moonIllum.fraction * 100);
+    const rating    = solunarRating(phase);
+    const stars     = '★'.repeat(rating) + '☆'.repeat(4 - rating);
+    const ratingClr = rating >= 3 ? 'var(--success)' : rating === 2 ? '#f59e0b' : 'var(--muted)';
+
+    // Build solunar periods
+    const moonRise = moonTimes.rise;
+    const moonSet  = moonTimes.set;
+    const periods  = [];
+
+    if (moonRise && !isNaN(moonRise)) {
+      periods.push({ label: 'Major', start: new Date(moonRise - 3600000), end: new Date(+moonRise + 3600000) });
+    }
+    if (moonSet && !isNaN(moonSet)) {
+      periods.push({ label: 'Major', start: new Date(moonSet - 3600000), end: new Date(+moonSet + 3600000) });
+    }
+    if (moonRise && moonSet && !isNaN(moonRise) && !isNaN(moonSet)) {
+      const transit   = (+moonRise + +moonSet) / 2;
+      const underfoot = transit + 12 * 3600000;
+      periods.push({ label: 'Minor', start: new Date(transit - 1800000),   end: new Date(transit + 1800000) });
+      periods.push({ label: 'Minor', start: new Date(underfoot - 1800000), end: new Date(underfoot + 1800000) });
+    }
+    periods.sort((a, b) => a.start - b.start);
+
+    const nowMs = now.getTime();
+    const periodRows = periods.map(p => {
+      const active = nowMs >= p.start && nowMs <= p.end;
+      const past   = nowMs > p.end;
+      return `<div class="solunar-period${active ? ' sol-active' : ''}${past ? ' sol-past' : ''}">
+        <span class="sp-label ${p.label === 'Major' ? 'major' : 'minor'}">${p.label}</span>
+        <span class="sp-time">${fmtTime(p.start)} – ${fmtTime(p.end)}</span>
+        ${active ? '<span class="sp-now">Now</span>' : ''}
+      </div>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div class="solunar-top">
+        <div class="solunar-moon">
+          <span class="moon-emoji">${getMoonEmoji(phase)}</span>
+          <div>
+            <div style="font-weight:700;font-size:0.88rem">${moonPhaseName(phase)}</div>
+            <div style="font-size:0.72rem;color:var(--muted)">${illum}% illuminated</div>
+          </div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:1.1rem;color:${ratingClr};letter-spacing:2px">${stars}</div>
+          <div style="font-size:0.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:2px">Fishing Rating</div>
+        </div>
+      </div>
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Solunar Periods</div>
+      ${periods.length ? periodRows : '<div style="font-size:0.82rem;color:var(--muted)">No moon above horizon today.</div>'}
+      <div class="solunar-sun-row">
+        <span>🌅 Sunrise ${fmtTime(sunTimes.sunrise)}</span>
+        <span>Sunset ${fmtTime(sunTimes.sunset)} 🌇</span>
+      </div>
+    `;
+  }
+
+  async function fetchTideData(lat, lng) {
+    const el = document.getElementById('tide-widget');
+    if (!el) return;
+    el.style.display = '';
+    const body = document.getElementById('tide-body');
+    body.innerHTML = '<div class="wind-loading">Looking up tides…</div>';
+
+    try {
+      const stRes  = await fetch('https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions');
+      const stJson = await stRes.json();
+      const stations = stJson.stations || [];
+
+      // Find nearest station
+      let nearest = null, minDist = Infinity;
+      for (const st of stations) {
+        const d = Math.hypot((st.lat || 0) - lat, (st.lng || 0) - lng);
+        if (d < minDist) { minDist = d; nearest = st; }
+      }
+
+      if (!nearest || minDist > 4) {
+        body.innerHTML = '<div class="wind-loading">No NOAA tide station found for this area.</div>';
+        return;
+      }
+
+      const today = new Date();
+      const fmt = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+      const url  = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&begin_date=${fmt(today)}&end_date=${fmt(today)}&datum=MLLW&station=${nearest.id}&time_zone=lst_ldt&interval=hilo&units=english&format=json`;
+      const res  = await fetch(url);
+      const json = await res.json();
+
+      if (json.error || !json.predictions?.length) {
+        body.innerHTML = '<div class="wind-loading">No tide predictions for this area.</div>';
+        return;
+      }
+
+      const nowMs = Date.now();
+      const parseTideTime = p => { const [d, t] = p.t.split(' '); return new Date(`${d}T${t}`); };
+      const next = json.predictions.find(p => parseTideTime(p).getTime() > nowMs);
+
+      const rows = json.predictions.map(p => {
+        const dt   = parseTideTime(p);
+        const past = dt.getTime() < nowMs;
+        const hi   = p.type === 'H';
+        return `<div class="tide-row${past ? ' past' : ''}">
+          <span class="tide-type ${hi ? 'high' : 'low'}">${hi ? '▲ High' : '▼ Low'}</span>
+          <span class="tide-time">${fmtTime(dt)}</span>
+          <span class="tide-ft">${parseFloat(p.v).toFixed(1)} ft</span>
+        </div>`;
+      }).join('');
+
+      body.innerHTML = `
+        ${next ? `<div class="tide-next">
+          <span style="font-size:0.78rem;font-weight:700;color:var(--accent);white-space:nowrap">${next.type === 'H' ? '▲ Next High' : '▼ Next Low'}</span>
+          <span style="font-weight:700">${fmtTime(parseTideTime(next))}</span>
+          <span style="color:var(--muted);font-size:0.85rem">${parseFloat(next.v).toFixed(1)} ft</span>
+        </div>` : ''}
+        <div class="tide-table">${rows}</div>
+        <div style="font-size:0.68rem;color:var(--muted);margin-top:8px">
+          Station: ${esc(nearest.name)}${nearest.state ? ', ' + esc(nearest.state) : ''}
+        </div>
+      `;
+    } catch (e) {
+      body.innerHTML = '<div class="wind-loading">Could not load tide data.</div>';
+    }
   }
 
   // ── Catches View ──────────────────────────────────────────────────────────
@@ -3223,8 +3484,10 @@
       const res  = await fetch(url);
       const json = await res.json();
       const data = json.current;
-      windCache = { data, location: locationName, ts: Date.now() };
+      windCache = { data, location: locationName, lat, lng, ts: Date.now() };
       renderWindWidget(data, locationName);
+      renderSolunarWidget(lat, lng);
+      fetchTideData(lat, lng);
     } catch (e) {
       if (body) body.innerHTML = '<div class="wind-loading">Could not load wind data. Check your connection.</div>';
     }
