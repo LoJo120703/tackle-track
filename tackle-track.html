@@ -1091,6 +1091,13 @@
         </button>
       </div>
     </div>
+    <!-- Current temperature -->
+    <div class="wind-card" id="temp-widget" style="display:none">
+      <div class="wind-card-header">
+        <span class="wind-card-title">Current Temperature</span>
+      </div>
+      <div id="temp-body"></div>
+    </div>
     <!-- Conditions table (tides + solunar) -->
     <div class="wind-card" id="conditions-widget" style="display:none">
       <div class="wind-card-header">
@@ -1761,14 +1768,12 @@
     return            { cls: 'tough', text: '🌬️ Tough conditions — strong wind, consider sheltered spots' };
   }
 
-  function renderWindWidget(d, locationName, airTemp, waterTemp) {
-    const speed  = Math.round(d.wind_speed_10m);
-    const gusts  = Math.round(d.wind_gusts_10m);
-    const dir    = d.wind_direction_10m;
-    const comp   = degToCompass(dir);
-    const adv    = windAdvisory(speed);
-
-    const hasTemps = airTemp != null || waterTemp != null;
+  function renderWindWidget(d, locationName) {
+    const speed = Math.round(d.wind_speed_10m);
+    const gusts = Math.round(d.wind_gusts_10m);
+    const dir   = d.wind_direction_10m;
+    const comp  = degToCompass(dir);
+    const adv   = windAdvisory(speed);
 
     document.getElementById('wind-location').textContent = locationName || '';
     document.getElementById('wind-body').innerHTML = `
@@ -1786,10 +1791,6 @@
           <div class="wind-stat"><div class="v">${gusts}</div><div class="l">mph Gusts</div></div>
         </div>
       </div>
-      ${hasTemps ? `<div class="wind-temps">
-        ${airTemp   != null ? `<span>🌡️ Air: ${fmtTemp(airTemp)}</span>`   : ''}
-        ${waterTemp != null ? `<span>💧 Water: ${fmtTemp(waterTemp)}</span>` : ''}
-      </div>` : ''}
       <div class="wind-advisory ${adv.cls}">${adv.text}</div>
       <div style="text-align:center;margin-top:10px">
         <button onclick="openWindMapPicker()" style="background:none;border:none;cursor:pointer;font-size:0.78rem;color:var(--accent);font-weight:600;text-decoration:underline;padding:0;">
@@ -1799,12 +1800,28 @@
     `;
   }
 
+  function renderTempWidget(airTemp, waterTemp) {
+    const el = document.getElementById('temp-widget');
+    if (!el) return;
+    if (airTemp == null && waterTemp == null) return;
+    el.style.display = '';
+    document.getElementById('temp-body').innerHTML = `
+      <div class="wind-temps" style="justify-content:flex-start;gap:24px;padding:4px 0">
+        ${airTemp   != null ? `<div class="wind-stat"><div class="v" style="font-size:1.4rem">${Math.round(airTemp * 9/5 + 32)}°</div><div class="l">Air °F</div></div>
+          <div class="wind-stat"><div class="v" style="font-size:1.4rem">${Math.round(airTemp)}°</div><div class="l">Air °C</div></div>` : ''}
+        ${waterTemp != null ? `<div class="wind-stat"><div class="v" style="font-size:1.4rem;color:#0891b2">${Math.round(waterTemp * 9/5 + 32)}°</div><div class="l">Water °F</div></div>
+          <div class="wind-stat"><div class="v" style="font-size:1.4rem;color:#0891b2">${Math.round(waterTemp)}°</div><div class="l">Water °C</div></div>` : ''}
+      </div>
+    `;
+  }
+
   async function fetchWindData(force) {
     const CACHE_MS = 10 * 60 * 1000; // 10 minutes
     if (!force && windCache && (Date.now() - windCache.ts) < CACHE_MS) {
       renderWindWidget(windCache.data, windCache.location);
       if (windCache.lat != null) {
-        renderWindWidget(windCache.data, windCache.location, windCache.airTemp, windCache.waterTemp);
+        renderWindWidget(windCache.data, windCache.location);
+        renderTempWidget(windCache.airTemp, windCache.waterTemp);
         if (tidePredictionsAll.length) {
           renderConditionsTable(windCache.lat, windCache.lng);
         } else {
@@ -1848,7 +1865,8 @@
         const airTemp   = data.temperature_2m ?? null;
         const waterTemp = marineJson.current?.sea_surface_temperature ?? null;
         windCache = { data, location: locationName, lat, lng: lon, airTemp, waterTemp, ts: Date.now() };
-        renderWindWidget(data, locationName, airTemp, waterTemp);
+        renderWindWidget(data, locationName);
+        renderTempWidget(airTemp, waterTemp);
         renderSolunarWidget(lat, lon);
         fetchTideData(lat, lon);
       } catch (e) {
@@ -1936,8 +1954,6 @@
       <thead><tr>
         <th class="cond-day-col">Day</th>
         <th>Tides</th>
-        <th>Air Temp</th>
-        <th>Water Temp</th>
         <th>Moon</th>
         <th>Rating</th>
         <th>Major Periods</th>
@@ -1967,14 +1983,6 @@
           ${fmtTime(dt)}<span class="ct-ft">${parseFloat(p.v).toFixed(1)}'</span>
         </div>`;
       }).join('') || '<span style="color:var(--muted)">—</span>';
-
-      // Air & water temps
-      const airEntry   = dailyAirTemps[dateStr];
-      const waterEntry = dailyWaterTemps[dateStr];
-      const airCell = airEntry
-        ? `<div>${fmtTemp(airEntry.max)}</div><div style="color:var(--muted);font-size:0.7rem">${fmtTemp(airEntry.min)}</div>`
-        : '—';
-      const waterCell = waterEntry != null ? fmtTemp(waterEntry) : '—';
 
       // Solunar
       let moonCell = '—', ratingCell = '—', majorCell = '—', minorCell = '—';
@@ -2013,8 +2021,6 @@
       html += `<tr class="${isToday ? 'cond-today' : ''}">
         <td class="cond-day-col">${dayTxt}</td>
         <td>${tideLines}</td>
-        <td>${airCell}</td>
-        <td>${waterCell}</td>
         <td>${moonCell}</td>
         <td>${ratingCell}</td>
         <td>${majorCell}</td>
@@ -3504,8 +3510,8 @@
   function openWindMapPicker() {
     windMapMode = true;
     document.getElementById('map-top-bar').querySelector('span').textContent = 'Wind Map';
-    document.getElementById('map-hint').textContent = 'Live wind · Tap a spot then "Check Wind Here" for details';
-    document.getElementById('map-use-btn').textContent = 'Check Wind Here';
+    document.getElementById('map-hint').textContent = 'Live wind · Tap a spot then "Check Conditions Here" for details';
+    document.getElementById('map-use-btn').textContent = 'Check Conditions Here';
     document.getElementById('map-overlay').classList.add('open');
 
     if (!mapInstance) {
