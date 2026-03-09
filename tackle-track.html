@@ -1093,17 +1093,21 @@
         </button>
       </div>
     </div>
+    <!-- Day picker (shared between tides & solunar) -->
+    <div id="conditions-day-picker" style="display:none">
+      <div class="chips" id="conditions-day-chips" style="margin-bottom:10px"></div>
+    </div>
     <!-- Tides -->
     <div class="wind-card" id="tide-widget" style="display:none">
       <div class="wind-card-header">
-        <span class="wind-card-title">Tides Today</span>
+        <span class="wind-card-title" id="tide-widget-title">Tides</span>
       </div>
       <div id="tide-body"></div>
     </div>
     <!-- Solunar -->
     <div class="wind-card" id="solunar-widget" style="display:none">
       <div class="wind-card-header">
-        <span class="wind-card-title">Solunar &amp; Moon</span>
+        <span class="wind-card-title" id="solunar-widget-title">Solunar &amp; Moon</span>
       </div>
       <div id="solunar-body"></div>
     </div>
@@ -1432,6 +1436,11 @@
   let windArrowBusy     = false;
   let windArrowTimer    = null;
   let windMoveListening = false;
+  let conditionsDay       = 0;   // 0 = today, 1 = tomorrow, etc.
+  let conditionsLat       = null;
+  let conditionsLng       = null;
+  let tidePredictionsAll  = [];  // all fetched predictions (7 days)
+  let tideStationInfo     = null;
 
   const USERS_KEY = 'tt_users';
   let activeUser  = null;
@@ -1795,8 +1804,16 @@
     if (!force && windCache && (Date.now() - windCache.ts) < CACHE_MS) {
       renderWindWidget(windCache.data, windCache.location);
       if (windCache.lat != null) {
-        renderSolunarWidget(windCache.lat, windCache.lng);
-        fetchTideData(windCache.lat, windCache.lng);
+        // Only re-render if we already have tide data cached; otherwise re-fetch
+        if (tidePredictionsAll.length) {
+          renderDayPicker();
+          renderTideForDay();
+          renderSolunarWidget(windCache.lat, windCache.lng);
+        } else {
+          conditionsDay = 0;
+          renderSolunarWidget(windCache.lat, windCache.lng);
+          fetchTideData(windCache.lat, windCache.lng);
+        }
       }
       return;
     }
@@ -1829,6 +1846,7 @@
         const json = await res.json();
         const data = json.current;
         windCache = { data, location: locationName, lat, lng: lon, ts: Date.now() };
+        conditionsDay = 0;
         renderWindWidget(data, locationName);
         renderSolunarWidget(lat, lon);
         fetchTideData(lat, lon);
@@ -1881,37 +1899,71 @@
     return 1;
   }
 
+  const DAYS = 7;
+
+  function dayLabel(offset) {
+    if (offset === 0) return 'Today';
+    if (offset === 1) return 'Tomorrow';
+    const d = new Date(); d.setDate(d.getDate() + offset);
+    return d.toLocaleDateString([], { weekday: 'short', month: 'numeric', day: 'numeric' });
+  }
+
+  function renderDayPicker() {
+    const picker = document.getElementById('conditions-day-picker');
+    const chips  = document.getElementById('conditions-day-chips');
+    if (!picker || !chips) return;
+    picker.style.display = '';
+    chips.innerHTML = Array.from({ length: DAYS }, (_, i) =>
+      `<button class="chip${conditionsDay === i ? ' active' : ''}" onclick="selectConditionsDay(${i})">${dayLabel(i)}</button>`
+    ).join('');
+  }
+
+  function selectConditionsDay(n) {
+    conditionsDay = n;
+    renderDayPicker();
+    renderTideForDay();
+    if (conditionsLat != null) renderSolunarForDay(conditionsLat, conditionsLng);
+  }
+
+  // ── Solunar ───────────────────────────────────────────────────────────────
   function renderSolunarWidget(lat, lng) {
-    const el = document.getElementById('solunar-widget');
-    if (!el) return;
-    el.style.display = '';
+    conditionsLat = lat; conditionsLng = lng;
+    document.getElementById('solunar-widget').style.display = '';
+    renderSolunarForDay(lat, lng);
+  }
+
+  function renderSolunarForDay(lat, lng) {
     const body = document.getElementById('solunar-body');
+    const title = document.getElementById('solunar-widget-title');
+    if (!body) return;
+    if (title) title.textContent = conditionsDay === 0 ? 'Solunar & Moon' : `Solunar & Moon — ${dayLabel(conditionsDay)}`;
+
     if (typeof SunCalc === 'undefined') {
       body.innerHTML = '<div class="wind-loading">Solunar data unavailable.</div>';
       return;
     }
 
-    const now       = new Date();
-    const sunTimes  = SunCalc.getTimes(now, lat, lng);
-    const moonTimes = SunCalc.getMoonTimes(now, lat, lng);
-    const moonIllum = SunCalc.getMoonIllumination(now);
+    const date = new Date();
+    date.setDate(date.getDate() + conditionsDay);
+    date.setHours(12, 0, 0, 0); // midday for illumination accuracy
+
+    const sunTimes  = SunCalc.getTimes(date, lat, lng);
+    const moonTimes = SunCalc.getMoonTimes(date, lat, lng);
+    const moonIllum = SunCalc.getMoonIllumination(date);
     const phase     = moonIllum.phase;
     const illum     = Math.round(moonIllum.fraction * 100);
     const rating    = solunarRating(phase);
     const stars     = '★'.repeat(rating) + '☆'.repeat(4 - rating);
     const ratingClr = rating >= 3 ? 'var(--success)' : rating === 2 ? '#f59e0b' : 'var(--muted)';
 
-    // Build solunar periods
     const moonRise = moonTimes.rise;
     const moonSet  = moonTimes.set;
     const periods  = [];
 
-    if (moonRise && !isNaN(moonRise)) {
+    if (moonRise && !isNaN(moonRise))
       periods.push({ label: 'Major', start: new Date(moonRise - 3600000), end: new Date(+moonRise + 3600000) });
-    }
-    if (moonSet && !isNaN(moonSet)) {
-      periods.push({ label: 'Major', start: new Date(moonSet - 3600000), end: new Date(+moonSet + 3600000) });
-    }
+    if (moonSet && !isNaN(moonSet))
+      periods.push({ label: 'Major', start: new Date(moonSet - 3600000),  end: new Date(+moonSet  + 3600000) });
     if (moonRise && moonSet && !isNaN(moonRise) && !isNaN(moonSet)) {
       const transit   = (+moonRise + +moonSet) / 2;
       const underfoot = transit + 12 * 3600000;
@@ -1920,10 +1972,11 @@
     }
     periods.sort((a, b) => a.start - b.start);
 
-    const nowMs = now.getTime();
+    const nowMs    = Date.now();
+    const isToday  = conditionsDay === 0;
     const periodRows = periods.map(p => {
-      const active = nowMs >= p.start && nowMs <= p.end;
-      const past   = nowMs > p.end;
+      const active = isToday && nowMs >= p.start && nowMs <= p.end;
+      const past   = isToday && nowMs > p.end;
       return `<div class="solunar-period${active ? ' sol-active' : ''}${past ? ' sol-past' : ''}">
         <span class="sp-label ${p.label === 'Major' ? 'major' : 'minor'}">${p.label}</span>
         <span class="sp-time">${fmtTime(p.start)} – ${fmtTime(p.end)}</span>
@@ -1946,11 +1999,59 @@
         </div>
       </div>
       <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Solunar Periods</div>
-      ${periods.length ? periodRows : '<div style="font-size:0.82rem;color:var(--muted)">No moon above horizon today.</div>'}
+      ${periods.length ? periodRows : '<div style="font-size:0.82rem;color:var(--muted)">No moon above horizon this day.</div>'}
       <div class="solunar-sun-row">
-        <span>🌅 Sunrise ${fmtTime(sunTimes.sunrise)}</span>
-        <span>Sunset ${fmtTime(sunTimes.sunset)} 🌇</span>
+        <span>🌅 ${fmtTime(sunTimes.sunrise)}</span>
+        <span>🌇 ${fmtTime(sunTimes.sunset)}</span>
       </div>
+    `;
+  }
+
+  // ── Tides ─────────────────────────────────────────────────────────────────
+  function parseTideTime(p) { const [d, t] = p.t.split(' '); return new Date(`${d}T${t}`); }
+
+  function renderTideForDay() {
+    const body  = document.getElementById('tide-body');
+    const title = document.getElementById('tide-widget-title');
+    if (!body) return;
+    if (title) title.textContent = conditionsDay === 0 ? 'Tides Today' : `Tides — ${dayLabel(conditionsDay)}`;
+
+    if (!tidePredictionsAll.length) return;
+
+    const target = new Date();
+    target.setDate(target.getDate() + conditionsDay);
+    const targetStr = target.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    const dayPreds = tidePredictionsAll.filter(p => p.t.startsWith(targetStr));
+    if (!dayPreds.length) {
+      body.innerHTML = '<div class="wind-loading">No predictions for this day.</div>';
+      return;
+    }
+
+    const nowMs   = Date.now();
+    const isToday = conditionsDay === 0;
+    const next    = isToday ? tidePredictionsAll.find(p => parseTideTime(p).getTime() > nowMs) : null;
+
+    const rows = dayPreds.map(p => {
+      const dt   = parseTideTime(p);
+      const past = isToday && dt.getTime() < nowMs;
+      const hi   = p.type === 'H';
+      return `<div class="tide-row${past ? ' past' : ''}">
+        <span class="tide-type ${hi ? 'high' : 'low'}">${hi ? '▲ High' : '▼ Low'}</span>
+        <span class="tide-time">${fmtTime(dt)}</span>
+        <span class="tide-ft">${parseFloat(p.v).toFixed(1)} ft</span>
+      </div>`;
+    }).join('');
+
+    const st = tideStationInfo;
+    body.innerHTML = `
+      ${next ? `<div class="tide-next">
+        <span style="font-size:0.78rem;font-weight:700;color:var(--accent);white-space:nowrap">${next.type === 'H' ? '▲ Next High' : '▼ Next Low'}</span>
+        <span style="font-weight:700">${fmtTime(parseTideTime(next))}</span>
+        <span style="color:var(--muted);font-size:0.85rem">${parseFloat(next.v).toFixed(1)} ft</span>
+      </div>` : ''}
+      <div class="tide-table">${rows}</div>
+      ${st ? `<div style="font-size:0.68rem;color:var(--muted);margin-top:8px">Station: ${esc(st.name)}${st.state ? ', ' + esc(st.state) : ''}</div>` : ''}
     `;
   }
 
@@ -1958,6 +2059,8 @@
     const el = document.getElementById('tide-widget');
     if (!el) return;
     el.style.display = '';
+    tidePredictionsAll = [];
+    tideStationInfo    = null;
     const body = document.getElementById('tide-body');
     body.innerHTML = '<div class="wind-loading">Looking up tides…</div>';
 
@@ -1966,7 +2069,6 @@
       const stJson = await stRes.json();
       const stations = stJson.stations || [];
 
-      // Find nearest station
       let nearest = null, minDist = Infinity;
       for (const st of stations) {
         const d = Math.hypot((st.lat || 0) - lat, (st.lng || 0) - lng);
@@ -1978,43 +2080,23 @@
         return;
       }
 
+      tideStationInfo = nearest;
+
       const today = new Date();
-      const fmt = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-      const url  = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&begin_date=${fmt(today)}&end_date=${fmt(today)}&datum=MLLW&station=${nearest.id}&time_zone=lst_ldt&interval=hilo&units=english&format=json`;
-      const res  = await fetch(url);
-      const json = await res.json();
+      const end   = new Date(); end.setDate(end.getDate() + DAYS - 1);
+      const fmt   = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+      const url   = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&begin_date=${fmt(today)}&end_date=${fmt(end)}&datum=MLLW&station=${nearest.id}&time_zone=lst_ldt&interval=hilo&units=english&format=json`;
+      const res   = await fetch(url);
+      const json  = await res.json();
 
       if (json.error || !json.predictions?.length) {
         body.innerHTML = '<div class="wind-loading">No tide predictions for this area.</div>';
         return;
       }
 
-      const nowMs = Date.now();
-      const parseTideTime = p => { const [d, t] = p.t.split(' '); return new Date(`${d}T${t}`); };
-      const next = json.predictions.find(p => parseTideTime(p).getTime() > nowMs);
-
-      const rows = json.predictions.map(p => {
-        const dt   = parseTideTime(p);
-        const past = dt.getTime() < nowMs;
-        const hi   = p.type === 'H';
-        return `<div class="tide-row${past ? ' past' : ''}">
-          <span class="tide-type ${hi ? 'high' : 'low'}">${hi ? '▲ High' : '▼ Low'}</span>
-          <span class="tide-time">${fmtTime(dt)}</span>
-          <span class="tide-ft">${parseFloat(p.v).toFixed(1)} ft</span>
-        </div>`;
-      }).join('');
-
-      body.innerHTML = `
-        ${next ? `<div class="tide-next">
-          <span style="font-size:0.78rem;font-weight:700;color:var(--accent);white-space:nowrap">${next.type === 'H' ? '▲ Next High' : '▼ Next Low'}</span>
-          <span style="font-weight:700">${fmtTime(parseTideTime(next))}</span>
-          <span style="color:var(--muted);font-size:0.85rem">${parseFloat(next.v).toFixed(1)} ft</span>
-        </div>` : ''}
-        <div class="tide-table">${rows}</div>
-        <div style="font-size:0.68rem;color:var(--muted);margin-top:8px">
-          Station: ${esc(nearest.name)}${nearest.state ? ', ' + esc(nearest.state) : ''}
-        </div>
-      `;
+      tidePredictionsAll = json.predictions;
+      renderTideForDay();
+      renderDayPicker();
     } catch (e) {
       body.innerHTML = '<div class="wind-loading">Could not load tide data.</div>';
     }
@@ -3485,6 +3567,7 @@
       const json = await res.json();
       const data = json.current;
       windCache = { data, location: locationName, lat, lng, ts: Date.now() };
+      conditionsDay = 0;
       renderWindWidget(data, locationName);
       renderSolunarWidget(lat, lng);
       fetchTideData(lat, lng);
