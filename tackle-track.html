@@ -915,68 +915,55 @@
     .wind-refresh-btn:hover { color: var(--accent); }
     .wind-refresh-btn svg { width: 13px; height: 13px; }
 
-    /* ── Tide widget ── */
-    .tide-next {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--accent-light);
-      border-radius: var(--radius-sm);
-      padding: 10px 12px;
-      margin-bottom: 10px;
+    /* ── Conditions table ── */
+    .cond-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -2px; }
+    .cond-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.76rem;
     }
-    .tide-table { display: flex; flex-direction: column; gap: 0; }
-    .tide-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.84rem;
-      padding: 7px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .tide-row:last-child { border-bottom: none; }
-    .tide-row.past { opacity: 0.42; }
-    .tide-type { font-weight: 700; font-size: 0.78rem; min-width: 68px; }
-    .tide-type.high { color: var(--accent); }
-    .tide-type.low  { color: var(--muted); }
-    .tide-time { flex: 1; }
-    .tide-ft   { font-weight: 700; }
-
-    /* ── Solunar widget ── */
-    .solunar-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-    .solunar-moon { display: flex; align-items: center; gap: 10px; }
-    .moon-emoji   { font-size: 2rem; line-height: 1; }
-    .solunar-period {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 8px;
-      border-radius: var(--radius-sm);
-      font-size: 0.82rem;
-      margin-bottom: 4px;
-      background: var(--bg);
-    }
-    .solunar-period.sol-active { background: #dcfce7; }
-    .solunar-period.sol-past   { opacity: 0.45; }
-    .sp-label { font-weight: 700; font-size: 0.7rem; padding: 2px 7px; border-radius: 999px; flex-shrink: 0; }
-    .sp-label.major { background: var(--navy); color: white; }
-    .sp-label.minor { background: var(--border); color: var(--muted); }
-    .sp-time  { flex: 1; color: var(--text); }
-    .sp-now   { font-size: 0.67rem; font-weight: 800; color: var(--success); text-transform: uppercase; letter-spacing: .05em; }
-    .solunar-sun-row {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 10px;
-      font-size: 0.82rem;
+    .cond-table th {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       color: var(--muted);
-      border-top: 1px solid var(--border);
-      padding-top: 8px;
+      padding: 5px 8px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      text-align: left;
+      background: var(--surface);
+      position: sticky;
+      top: 0;
     }
+    .cond-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    .cond-table tr:last-child td { border-bottom: none; }
+    .cond-day-col {
+      position: sticky;
+      left: 0;
+      background: var(--surface);
+      z-index: 2;
+      font-weight: 600;
+      min-width: 74px;
+      border-right: 1px solid var(--border);
+    }
+    .cond-table th.cond-day-col { z-index: 3; }
+    .cond-today > td { background: var(--accent-light) !important; }
+    .cond-today > .cond-day-col { background: var(--accent-light); }
+    .cond-tide-line { margin-bottom: 2px; }
+    .cond-tide-line.t-past { opacity: 0.38; }
+    .ct-hi { color: var(--accent); font-weight: 700; }
+    .ct-lo { color: var(--muted); font-weight: 700; }
+    .ct-ft { font-size: 0.7rem; color: var(--muted); margin-left: 2px; }
+    .cond-period { margin-bottom: 2px; font-size: 0.73rem; }
+    .cond-period.cp-active { color: var(--success); font-weight: 700; }
+    .cond-period.cp-past   { opacity: 0.38; }
+    .cond-rating { letter-spacing: 1px; font-size: 0.78rem; }
 
     /* ── Reel Talk ── */
     .rt-conv-item {
@@ -1093,23 +1080,13 @@
         </button>
       </div>
     </div>
-    <!-- Day picker (shared between tides & solunar) -->
-    <div id="conditions-day-picker" style="display:none">
-      <div class="chips" id="conditions-day-chips" style="margin-bottom:10px"></div>
-    </div>
-    <!-- Tides -->
-    <div class="wind-card" id="tide-widget" style="display:none">
+    <!-- Conditions table (tides + solunar) -->
+    <div class="wind-card" id="conditions-widget" style="display:none">
       <div class="wind-card-header">
-        <span class="wind-card-title" id="tide-widget-title">Tides</span>
+        <span class="wind-card-title">Tides &amp; Solunar</span>
+        <span class="wind-card-location" id="conditions-station"></span>
       </div>
-      <div id="tide-body"></div>
-    </div>
-    <!-- Solunar -->
-    <div class="wind-card" id="solunar-widget" style="display:none">
-      <div class="wind-card-header">
-        <span class="wind-card-title" id="solunar-widget-title">Solunar &amp; Moon</span>
-      </div>
-      <div id="solunar-body"></div>
+      <div id="conditions-body"><div class="wind-loading">Loading conditions…</div></div>
     </div>
 
     <div class="sec-header">
@@ -1436,7 +1413,6 @@
   let windArrowBusy     = false;
   let windArrowTimer    = null;
   let windMoveListening = false;
-  let conditionsDay       = 0;   // 0 = today, 1 = tomorrow, etc.
   let conditionsLat       = null;
   let conditionsLng       = null;
   let tidePredictionsAll  = [];  // all fetched predictions (7 days)
@@ -1804,13 +1780,9 @@
     if (!force && windCache && (Date.now() - windCache.ts) < CACHE_MS) {
       renderWindWidget(windCache.data, windCache.location);
       if (windCache.lat != null) {
-        // Only re-render if we already have tide data cached; otherwise re-fetch
         if (tidePredictionsAll.length) {
-          renderDayPicker();
-          renderTideForDay();
-          renderSolunarWidget(windCache.lat, windCache.lng);
+          renderConditionsTable(windCache.lat, windCache.lng);
         } else {
-          conditionsDay = 0;
           renderSolunarWidget(windCache.lat, windCache.lng);
           fetchTideData(windCache.lat, windCache.lng);
         }
@@ -1899,7 +1871,7 @@
     return 1;
   }
 
-  const DAYS = 7;
+  const DAYS = 30;
 
   function dayLabel(offset) {
     if (offset === 0) return 'Today';
@@ -1908,161 +1880,123 @@
     return d.toLocaleDateString([], { weekday: 'short', month: 'numeric', day: 'numeric' });
   }
 
-  function renderDayPicker() {
-    const picker = document.getElementById('conditions-day-picker');
-    const chips  = document.getElementById('conditions-day-chips');
-    if (!picker || !chips) return;
-    picker.style.display = '';
-    chips.innerHTML = Array.from({ length: DAYS }, (_, i) =>
-      `<button class="chip${conditionsDay === i ? ' active' : ''}" onclick="selectConditionsDay(${i})">${dayLabel(i)}</button>`
-    ).join('');
-  }
-
-  function selectConditionsDay(n) {
-    conditionsDay = n;
-    renderDayPicker();
-    renderTideForDay();
-    if (conditionsLat != null) renderSolunarForDay(conditionsLat, conditionsLng);
-  }
-
-  // ── Solunar ───────────────────────────────────────────────────────────────
-  function renderSolunarWidget(lat, lng) {
-    conditionsLat = lat; conditionsLng = lng;
-    document.getElementById('solunar-widget').style.display = '';
-    renderSolunarForDay(lat, lng);
-  }
-
-  function renderSolunarForDay(lat, lng) {
-    const body = document.getElementById('solunar-body');
-    const title = document.getElementById('solunar-widget-title');
-    if (!body) return;
-    if (title) title.textContent = conditionsDay === 0 ? 'Solunar & Moon' : `Solunar & Moon — ${dayLabel(conditionsDay)}`;
-
-    if (typeof SunCalc === 'undefined') {
-      body.innerHTML = '<div class="wind-loading">Solunar data unavailable.</div>';
-      return;
-    }
-
-    const date = new Date();
-    date.setDate(date.getDate() + conditionsDay);
-    date.setHours(12, 0, 0, 0); // midday for illumination accuracy
-
-    const sunTimes  = SunCalc.getTimes(date, lat, lng);
-    const moonTimes = SunCalc.getMoonTimes(date, lat, lng);
-    const moonIllum = SunCalc.getMoonIllumination(date);
-    const phase     = moonIllum.phase;
-    const illum     = Math.round(moonIllum.fraction * 100);
-    const rating    = solunarRating(phase);
-    const stars     = '★'.repeat(rating) + '☆'.repeat(4 - rating);
-    const ratingClr = rating >= 3 ? 'var(--success)' : rating === 2 ? '#f59e0b' : 'var(--muted)';
-
-    const moonRise = moonTimes.rise;
-    const moonSet  = moonTimes.set;
-    const periods  = [];
-
-    if (moonRise && !isNaN(moonRise))
-      periods.push({ label: 'Major', start: new Date(moonRise - 3600000), end: new Date(+moonRise + 3600000) });
-    if (moonSet && !isNaN(moonSet))
-      periods.push({ label: 'Major', start: new Date(moonSet - 3600000),  end: new Date(+moonSet  + 3600000) });
-    if (moonRise && moonSet && !isNaN(moonRise) && !isNaN(moonSet)) {
-      const transit   = (+moonRise + +moonSet) / 2;
-      const underfoot = transit + 12 * 3600000;
-      periods.push({ label: 'Minor', start: new Date(transit - 1800000),   end: new Date(transit + 1800000) });
-      periods.push({ label: 'Minor', start: new Date(underfoot - 1800000), end: new Date(underfoot + 1800000) });
-    }
-    periods.sort((a, b) => a.start - b.start);
-
-    const nowMs    = Date.now();
-    const isToday  = conditionsDay === 0;
-    const periodRows = periods.map(p => {
-      const active = isToday && nowMs >= p.start && nowMs <= p.end;
-      const past   = isToday && nowMs > p.end;
-      return `<div class="solunar-period${active ? ' sol-active' : ''}${past ? ' sol-past' : ''}">
-        <span class="sp-label ${p.label === 'Major' ? 'major' : 'minor'}">${p.label}</span>
-        <span class="sp-time">${fmtTime(p.start)} – ${fmtTime(p.end)}</span>
-        ${active ? '<span class="sp-now">Now</span>' : ''}
-      </div>`;
-    }).join('');
-
-    body.innerHTML = `
-      <div class="solunar-top">
-        <div class="solunar-moon">
-          <span class="moon-emoji">${getMoonEmoji(phase)}</span>
-          <div>
-            <div style="font-weight:700;font-size:0.88rem">${moonPhaseName(phase)}</div>
-            <div style="font-size:0.72rem;color:var(--muted)">${illum}% illuminated</div>
-          </div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.1rem;color:${ratingClr};letter-spacing:2px">${stars}</div>
-          <div style="font-size:0.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:2px">Fishing Rating</div>
-        </div>
-      </div>
-      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Solunar Periods</div>
-      ${periods.length ? periodRows : '<div style="font-size:0.82rem;color:var(--muted)">No moon above horizon this day.</div>'}
-      <div class="solunar-sun-row">
-        <span>🌅 ${fmtTime(sunTimes.sunrise)}</span>
-        <span>🌇 ${fmtTime(sunTimes.sunset)}</span>
-      </div>
-    `;
-  }
-
-  // ── Tides ─────────────────────────────────────────────────────────────────
+  // ── Conditions table ──────────────────────────────────────────────────────
   function parseTideTime(p) { const [d, t] = p.t.split(' '); return new Date(`${d}T${t}`); }
 
-  function renderTideForDay() {
-    const body  = document.getElementById('tide-body');
-    const title = document.getElementById('tide-widget-title');
-    if (!body) return;
-    if (title) title.textContent = conditionsDay === 0 ? 'Tides Today' : `Tides — ${dayLabel(conditionsDay)}`;
+  function renderSolunarWidget(lat, lng) {
+    conditionsLat = lat; conditionsLng = lng;
+    // Table is rendered by fetchTideData once tides arrive; show widget now
+    const el = document.getElementById('conditions-widget');
+    if (el) el.style.display = '';
+  }
 
-    if (!tidePredictionsAll.length) return;
+  function renderConditionsTable(lat, lng) {
+    const el = document.getElementById('conditions-widget');
+    if (!el) return;
+    el.style.display = '';
 
-    const target = new Date();
-    target.setDate(target.getDate() + conditionsDay);
-    const targetStr = target.toISOString().slice(0, 10); // YYYY-MM-DD
+    const stEl = document.getElementById('conditions-station');
+    if (stEl && tideStationInfo)
+      stEl.textContent = tideStationInfo.name + (tideStationInfo.state ? ', ' + tideStationInfo.state : '');
 
-    const dayPreds = tidePredictionsAll.filter(p => p.t.startsWith(targetStr));
-    if (!dayPreds.length) {
-      body.innerHTML = '<div class="wind-loading">No predictions for this day.</div>';
-      return;
+    const body  = document.getElementById('conditions-body');
+    const nowMs = Date.now();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    let html = `<div class="cond-scroll"><table class="cond-table">
+      <thead><tr>
+        <th class="cond-day-col">Day</th>
+        <th>Tides</th>
+        <th>Moon</th>
+        <th>Rating</th>
+        <th>Major Periods</th>
+        <th>Minor Periods</th>
+      </tr></thead><tbody>`;
+
+    const hasSunCalc = typeof SunCalc !== 'undefined';
+
+    for (let d = 0; d < DAYS; d++) {
+      const date    = new Date(today); date.setDate(today.getDate() + d);
+      const dateStr = date.toISOString().slice(0, 10);
+      const isToday = d === 0;
+
+      // Day label
+      const dayTxt = isToday ? '<strong>Today</strong>'
+        : d === 1 ? 'Tomorrow'
+        : date.toLocaleDateString([], { weekday: 'short', month: 'numeric', day: 'numeric' });
+
+      // Tides
+      const dayPreds = tidePredictionsAll.filter(p => p.t.startsWith(dateStr));
+      const tideLines = dayPreds.map(p => {
+        const dt   = parseTideTime(p);
+        const past = isToday && dt.getTime() < nowMs;
+        const hi   = p.type === 'H';
+        return `<div class="cond-tide-line${past ? ' t-past' : ''}">
+          <span class="${hi ? 'ct-hi' : 'ct-lo'}">${hi ? '▲' : '▼'}</span>
+          ${fmtTime(dt)}<span class="ct-ft">${parseFloat(p.v).toFixed(1)}'</span>
+        </div>`;
+      }).join('') || '<span style="color:var(--muted)">—</span>';
+
+      // Solunar
+      let moonCell = '—', ratingCell = '—', majorCell = '—', minorCell = '—';
+      if (hasSunCalc) {
+        const noon      = new Date(date); noon.setHours(12);
+        const moonTimes = SunCalc.getMoonTimes(date, lat, lng);
+        const moonIllum = SunCalc.getMoonIllumination(noon);
+        const phase     = moonIllum.phase;
+        const illum     = Math.round(moonIllum.fraction * 100);
+        const rating    = solunarRating(phase);
+        const rClr      = rating >= 3 ? 'var(--success)' : rating === 2 ? '#f59e0b' : 'var(--muted)';
+
+        moonCell   = `<div style="text-align:center"><div style="font-size:1.2rem;line-height:1">${getMoonEmoji(phase)}</div><div style="font-size:0.65rem;color:var(--muted)">${illum}%</div></div>`;
+        ratingCell = `<span class="cond-rating" style="color:${rClr}">${'★'.repeat(rating)}${'☆'.repeat(4 - rating)}</span>`;
+
+        const moonRise = moonTimes.rise, moonSet = moonTimes.set;
+        const majors = [], minors = [];
+
+        if (moonRise && !isNaN(moonRise))
+          majors.push({ start: new Date(moonRise - 3600000), end: new Date(+moonRise + 3600000) });
+        if (moonSet && !isNaN(moonSet))
+          majors.push({ start: new Date(moonSet - 3600000),  end: new Date(+moonSet  + 3600000) });
+        if (moonRise && moonSet && !isNaN(moonRise) && !isNaN(moonSet)) {
+          const transit   = (+moonRise + +moonSet) / 2;
+          const underfoot = transit + 12 * 3600000;
+          minors.push({ start: new Date(transit - 1800000),   end: new Date(transit + 1800000) });
+          minors.push({ start: new Date(underfoot - 1800000), end: new Date(underfoot + 1800000) });
+        }
+
+        const periodLine = (p) => {
+          const active = isToday && nowMs >= p.start && nowMs <= p.end;
+          const past   = isToday && nowMs > p.end;
+          return `<div class="cond-period${active ? ' cp-active' : ''}${past ? ' cp-past' : ''}">${fmtTime(p.start)}–${fmtTime(p.end)}</div>`;
+        };
+
+        if (majors.length) majorCell = majors.map(periodLine).join('');
+        if (minors.length) minorCell = minors.map(periodLine).join('');
+      }
+
+      html += `<tr class="${isToday ? 'cond-today' : ''}">
+        <td class="cond-day-col">${dayTxt}</td>
+        <td>${tideLines}</td>
+        <td>${moonCell}</td>
+        <td>${ratingCell}</td>
+        <td>${majorCell}</td>
+        <td>${minorCell}</td>
+      </tr>`;
     }
 
-    const nowMs   = Date.now();
-    const isToday = conditionsDay === 0;
-    const next    = isToday ? tidePredictionsAll.find(p => parseTideTime(p).getTime() > nowMs) : null;
-
-    const rows = dayPreds.map(p => {
-      const dt   = parseTideTime(p);
-      const past = isToday && dt.getTime() < nowMs;
-      const hi   = p.type === 'H';
-      return `<div class="tide-row${past ? ' past' : ''}">
-        <span class="tide-type ${hi ? 'high' : 'low'}">${hi ? '▲ High' : '▼ Low'}</span>
-        <span class="tide-time">${fmtTime(dt)}</span>
-        <span class="tide-ft">${parseFloat(p.v).toFixed(1)} ft</span>
-      </div>`;
-    }).join('');
-
-    const st = tideStationInfo;
-    body.innerHTML = `
-      ${next ? `<div class="tide-next">
-        <span style="font-size:0.78rem;font-weight:700;color:var(--accent);white-space:nowrap">${next.type === 'H' ? '▲ Next High' : '▼ Next Low'}</span>
-        <span style="font-weight:700">${fmtTime(parseTideTime(next))}</span>
-        <span style="color:var(--muted);font-size:0.85rem">${parseFloat(next.v).toFixed(1)} ft</span>
-      </div>` : ''}
-      <div class="tide-table">${rows}</div>
-      ${st ? `<div style="font-size:0.68rem;color:var(--muted);margin-top:8px">Station: ${esc(st.name)}${st.state ? ', ' + esc(st.state) : ''}</div>` : ''}
-    `;
+    html += `</tbody></table></div>`;
+    body.innerHTML = html;
   }
 
   async function fetchTideData(lat, lng) {
-    const el = document.getElementById('tide-widget');
+    const el = document.getElementById('conditions-widget');
     if (!el) return;
     el.style.display = '';
     tidePredictionsAll = [];
     tideStationInfo    = null;
-    const body = document.getElementById('tide-body');
-    body.innerHTML = '<div class="wind-loading">Looking up tides…</div>';
+    const body = document.getElementById('conditions-body');
+    body.innerHTML = '<div class="wind-loading">Looking up tide station…</div>';
 
     try {
       const stRes  = await fetch('https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions');
@@ -2076,11 +2010,14 @@
       }
 
       if (!nearest || minDist > 4) {
-        body.innerHTML = '<div class="wind-loading">No NOAA tide station found for this area.</div>';
+        body.innerHTML = '<div class="wind-loading">No NOAA tide station found for this area — solunar still shown below.</div>';
+        tideStationInfo = null;
+        renderConditionsTable(lat, lng);
         return;
       }
 
       tideStationInfo = nearest;
+      body.innerHTML = '<div class="wind-loading">Fetching 30 days of tides…</div>';
 
       const today = new Date();
       const end   = new Date(); end.setDate(end.getDate() + DAYS - 1);
@@ -2090,13 +2027,13 @@
       const json  = await res.json();
 
       if (json.error || !json.predictions?.length) {
-        body.innerHTML = '<div class="wind-loading">No tide predictions for this area.</div>';
+        body.innerHTML = '<div class="wind-loading">No tide predictions returned — solunar still shown.</div>';
+        renderConditionsTable(lat, lng);
         return;
       }
 
       tidePredictionsAll = json.predictions;
-      renderTideForDay();
-      renderDayPicker();
+      renderConditionsTable(lat, lng);
     } catch (e) {
       body.innerHTML = '<div class="wind-loading">Could not load tide data.</div>';
     }
