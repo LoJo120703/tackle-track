@@ -1024,6 +1024,11 @@
         </div>
       </div>
       <div id="wind-body"><div class="wind-loading">Locating you…</div></div>
+      <div id="wind-map-link" style="text-align:center;margin-top:10px;display:none">
+        <button onclick="openWindMapPicker()" style="background:none;border:none;cursor:pointer;font-size:0.78rem;color:var(--accent);font-weight:600;text-decoration:underline;padding:0;">
+          📍 Search a different location
+        </button>
+      </div>
     </div>
     <div class="sec-header">
       <span class="sec-title">Recent Catches</span>
@@ -1343,6 +1348,7 @@
   let mapPickedLat = null;
   let mapPickedLng = null;
   let mapPickedAddress = null;
+  let windMapMode  = false;  // true when map was opened from the wind widget
 
   const USERS_KEY = 'tt_users';
   let activeUser  = null;
@@ -1693,6 +1699,11 @@
         </div>
       </div>
       <div class="wind-advisory ${adv.cls}">${adv.text}</div>
+      <div style="text-align:center;margin-top:10px">
+        <button onclick="openWindMapPicker()" style="background:none;border:none;cursor:pointer;font-size:0.78rem;color:var(--accent);font-weight:600;text-decoration:underline;padding:0;">
+          📍 Search a different location
+        </button>
+      </div>
     `;
   }
 
@@ -1714,6 +1725,8 @@
     navigator.geolocation.getCurrentPosition(async pos => {
       const { latitude: lat, longitude: lon } = pos.coords;
       if (body) body.innerHTML = '<div class="wind-loading">Fetching wind data…</div>';
+      const mapLink = document.getElementById('wind-map-link');
+      if (mapLink) mapLink.style.display = 'none';
       try {
         // Reverse geocode for a readable location name (using Open-Meteo doesn't provide names)
         let locationName = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
@@ -1732,9 +1745,13 @@
         renderWindWidget(data, locationName);
       } catch (e) {
         if (body) body.innerHTML = '<div class="wind-loading">Could not load wind data. Check your connection.</div>';
+        const mapLink = document.getElementById('wind-map-link');
+        if (mapLink) mapLink.style.display = 'block';
       }
     }, () => {
-      if (body) body.innerHTML = '<div class="wind-loading">Location access denied — enable location to see wind conditions.</div>';
+      if (body) body.innerHTML = '<div class="wind-loading">Location access denied — enable location or search below.</div>';
+      const mapLink = document.getElementById('wind-map-link');
+      if (mapLink) mapLink.style.display = 'block';
     });
   }
 
@@ -3012,6 +3029,10 @@
 
   // ── Map picker ───────────────────────────────────────────────────────────
   function openMapPicker() {
+    windMapMode = false;
+    document.getElementById('map-top-bar').querySelector('span').textContent = 'Pick Location';
+    document.getElementById('map-hint').textContent = 'Tap anywhere on the map to drop a pin';
+    document.getElementById('map-use-btn').textContent = 'Use This Location';
     document.getElementById('map-overlay').classList.add('open');
 
     if (!mapInstance) {
@@ -3052,6 +3073,59 @@
 
   function closeMapPicker() {
     document.getElementById('map-overlay').classList.remove('open');
+    windMapMode = false;
+  }
+
+  function openWindMapPicker() {
+    windMapMode = true;
+    document.getElementById('map-top-bar').querySelector('span').textContent = 'Search Wind Location';
+    document.getElementById('map-hint').textContent = 'Tap anywhere on the map to check wind conditions there';
+    document.getElementById('map-use-btn').textContent = 'Check Wind Here';
+    document.getElementById('map-overlay').classList.add('open');
+
+    if (!mapInstance) {
+      mapInstance = L.map('map-el').setView([39.5, -98.35], 4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+      }).addTo(mapInstance);
+      mapInstance.on('click', e => {
+        placeMapPin(e.latlng.lat, e.latlng.lng);
+        reverseGeocode(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    mapPickedLat = mapPickedLng = null;
+    mapPickedAddress = null;
+    document.getElementById('map-address-text').textContent = 'Tap the map to place a pin';
+    document.getElementById('map-address-text').style.color = 'var(--muted)';
+    document.getElementById('map-coords-text').textContent = '';
+    document.getElementById('map-use-btn').disabled = true;
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        mapInstance.setView([pos.coords.latitude, pos.coords.longitude], 10);
+      }, () => {}, { timeout: 6000 });
+    }
+
+    setTimeout(() => mapInstance.invalidateSize(), 150);
+  }
+
+  async function fetchWindDataAt(lat, lng, locationName) {
+    windCache = null; // clear cache so next auto-fetch doesn't show stale location
+    const body = document.getElementById('wind-body');
+    if (body) body.innerHTML = '<div class="wind-loading">Fetching wind data…</div>';
+    document.getElementById('wind-location').textContent = locationName || `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=mph&timezone=auto`;
+      const res  = await fetch(url);
+      const json = await res.json();
+      const data = json.current;
+      windCache = { data, location: locationName, ts: Date.now() };
+      renderWindWidget(data, locationName);
+    } catch (e) {
+      if (body) body.innerHTML = '<div class="wind-loading">Could not load wind data. Check your connection.</div>';
+    }
   }
 
   function placeMapPin(lat, lng) {
@@ -3106,10 +3180,20 @@
 
   function confirmMapLocation() {
     if (mapPickedLat === null) return;
-    pendingLat = mapPickedLat;
-    pendingLng = mapPickedLng;
-    document.getElementById('c-location').value = mapPickedAddress || `${mapPickedLat.toFixed(4)}, ${mapPickedLng.toFixed(4)}`;
-    closeMapPicker();
+    if (windMapMode) {
+      const loc = mapPickedAddress || `${mapPickedLat.toFixed(4)}, ${mapPickedLng.toFixed(4)}`;
+      closeMapPicker();
+      // Restore default map labels for next catch use
+      document.getElementById('map-top-bar').querySelector('span').textContent = 'Pick Location';
+      document.getElementById('map-hint').textContent = 'Tap anywhere on the map to drop a pin';
+      document.getElementById('map-use-btn').textContent = 'Use This Location';
+      fetchWindDataAt(mapPickedLat, mapPickedLng, loc);
+    } else {
+      pendingLat = mapPickedLat;
+      pendingLng = mapPickedLng;
+      document.getElementById('c-location').value = mapPickedAddress || `${mapPickedLat.toFixed(4)}, ${mapPickedLng.toFixed(4)}`;
+      closeMapPicker();
+    }
   }
 
   // ── Keyboard ──────────────────────────────────────────────────────────────
