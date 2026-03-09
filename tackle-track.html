@@ -1806,11 +1806,9 @@
     if (airTemp == null && waterTemp == null) return;
     el.style.display = '';
     document.getElementById('temp-body').innerHTML = `
-      <div class="wind-temps" style="justify-content:flex-start;gap:24px;padding:4px 0">
-        ${airTemp   != null ? `<div class="wind-stat"><div class="v" style="font-size:1.4rem">${Math.round(airTemp * 9/5 + 32)}°</div><div class="l">Air °F</div></div>
-          <div class="wind-stat"><div class="v" style="font-size:1.4rem">${Math.round(airTemp)}°</div><div class="l">Air °C</div></div>` : ''}
-        ${waterTemp != null ? `<div class="wind-stat"><div class="v" style="font-size:1.4rem;color:#0891b2">${Math.round(waterTemp * 9/5 + 32)}°</div><div class="l">Water °F</div></div>
-          <div class="wind-stat"><div class="v" style="font-size:1.4rem;color:#0891b2">${Math.round(waterTemp)}°</div><div class="l">Water °C</div></div>` : ''}
+      <div class="stats-grid" style="margin-bottom:0">
+        ${airTemp   != null ? `<div class="stat-card"><div class="val">${Math.round(airTemp * 9/5 + 32)}°F / ${Math.round(airTemp)}°C</div><div class="lbl">Air Temperature</div></div>` : ''}
+        ${waterTemp != null ? `<div class="stat-card"><div class="val" style="color:#0891b2">${Math.round(waterTemp * 9/5 + 32)}°F / ${Math.round(waterTemp)}°C</div><div class="lbl">Water Temperature</div></div>` : ''}
       </div>
     `;
   }
