@@ -964,6 +964,17 @@
     .cond-period.cp-active { color: var(--success); font-weight: 700; }
     .cond-period.cp-past   { opacity: 0.38; }
     .cond-rating { letter-spacing: 1px; font-size: 0.78rem; }
+    .wind-temps {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      flex-wrap: wrap;
+    }
+    .wind-temps span { display: flex; align-items: center; gap: 4px; }
 
     /* ── Reel Talk ── */
     .rt-conv-item {
@@ -1415,8 +1426,10 @@
   let windMoveListening = false;
   let conditionsLat       = null;
   let conditionsLng       = null;
-  let tidePredictionsAll  = [];  // all fetched predictions (7 days)
+  let tidePredictionsAll  = [];
   let tideStationInfo     = null;
+  let dailyAirTemps       = {};  // { 'YYYY-MM-DD': { max, min } }
+  let dailyWaterTemps     = {};  // { 'YYYY-MM-DD': temp_c }
 
   const USERS_KEY = 'tt_users';
   let activeUser  = null;
@@ -1731,6 +1744,11 @@
   // ── Wind Widget ───────────────────────────────────────────────────────────
   let windCache = null;  // { data, ts }
 
+  function fmtTemp(c) {
+    if (c == null || isNaN(c)) return '—';
+    return `${Math.round(c * 9/5 + 32)}°F / ${Math.round(c)}°C`;
+  }
+
   function degToCompass(deg) {
     const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
     return dirs[Math.round(deg / 22.5) % 16];
@@ -1743,12 +1761,14 @@
     return            { cls: 'tough', text: '🌬️ Tough conditions — strong wind, consider sheltered spots' };
   }
 
-  function renderWindWidget(d, locationName) {
+  function renderWindWidget(d, locationName, airTemp, waterTemp) {
     const speed  = Math.round(d.wind_speed_10m);
     const gusts  = Math.round(d.wind_gusts_10m);
     const dir    = d.wind_direction_10m;
     const comp   = degToCompass(dir);
     const adv    = windAdvisory(speed);
+
+    const hasTemps = airTemp != null || waterTemp != null;
 
     document.getElementById('wind-location').textContent = locationName || '';
     document.getElementById('wind-body').innerHTML = `
@@ -1766,6 +1786,10 @@
           <div class="wind-stat"><div class="v">${gusts}</div><div class="l">mph Gusts</div></div>
         </div>
       </div>
+      ${hasTemps ? `<div class="wind-temps">
+        ${airTemp   != null ? `<span>🌡️ Air: ${fmtTemp(airTemp)}</span>`   : ''}
+        ${waterTemp != null ? `<span>💧 Water: ${fmtTemp(waterTemp)}</span>` : ''}
+      </div>` : ''}
       <div class="wind-advisory ${adv.cls}">${adv.text}</div>
       <div style="text-align:center;margin-top:10px">
         <button onclick="openWindMapPicker()" style="background:none;border:none;cursor:pointer;font-size:0.78rem;color:var(--accent);font-weight:600;text-decoration:underline;padding:0;">
@@ -1780,6 +1804,7 @@
     if (!force && windCache && (Date.now() - windCache.ts) < CACHE_MS) {
       renderWindWidget(windCache.data, windCache.location);
       if (windCache.lat != null) {
+        renderWindWidget(windCache.data, windCache.location, windCache.airTemp, windCache.waterTemp);
         if (tidePredictionsAll.length) {
           renderConditionsTable(windCache.lat, windCache.lng);
         } else {
@@ -1813,13 +1838,17 @@
           locationName = a.city || a.town || a.village || a.county || locationName;
         } catch (_) {}
 
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=mph&timezone=auto`;
-        const res  = await fetch(url);
-        const json = await res.json();
-        const data = json.current;
-        windCache = { data, location: locationName, lat, lng: lon, ts: Date.now() };
-        conditionsDay = 0;
-        renderWindWidget(data, locationName);
+        const [weatherRes, marineRes] = await Promise.allSettled([
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m&wind_speed_unit=mph&timezone=auto`),
+          fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&current=sea_surface_temperature&timezone=auto`)
+        ]);
+        const weatherJson = weatherRes.status === 'fulfilled' ? await weatherRes.value.json() : {};
+        const marineJson  = marineRes.status  === 'fulfilled' ? await marineRes.value.json()  : {};
+        const data      = weatherJson.current || {};
+        const airTemp   = data.temperature_2m ?? null;
+        const waterTemp = marineJson.current?.sea_surface_temperature ?? null;
+        windCache = { data, location: locationName, lat, lng: lon, airTemp, waterTemp, ts: Date.now() };
+        renderWindWidget(data, locationName, airTemp, waterTemp);
         renderSolunarWidget(lat, lon);
         fetchTideData(lat, lon);
       } catch (e) {
@@ -1907,6 +1936,8 @@
       <thead><tr>
         <th class="cond-day-col">Day</th>
         <th>Tides</th>
+        <th>Air Temp</th>
+        <th>Water Temp</th>
         <th>Moon</th>
         <th>Rating</th>
         <th>Major Periods</th>
@@ -1937,6 +1968,14 @@
         </div>`;
       }).join('') || '<span style="color:var(--muted)">—</span>';
 
+      // Air & water temps
+      const airEntry   = dailyAirTemps[dateStr];
+      const waterEntry = dailyWaterTemps[dateStr];
+      const airCell = airEntry
+        ? `<div>${fmtTemp(airEntry.max)}</div><div style="color:var(--muted);font-size:0.7rem">${fmtTemp(airEntry.min)}</div>`
+        : '—';
+      const waterCell = waterEntry != null ? fmtTemp(waterEntry) : '—';
+
       // Solunar
       let moonCell = '—', ratingCell = '—', majorCell = '—', minorCell = '—';
       if (hasSunCalc) {
@@ -1953,24 +1992,20 @@
 
         const moonRise = moonTimes.rise, moonSet = moonTimes.set;
         const majors = [], minors = [];
-
         if (moonRise && !isNaN(moonRise))
           majors.push({ start: new Date(moonRise - 3600000), end: new Date(+moonRise + 3600000) });
         if (moonSet && !isNaN(moonSet))
-          majors.push({ start: new Date(moonSet - 3600000),  end: new Date(+moonSet  + 3600000) });
+          majors.push({ start: new Date(moonSet - 3600000), end: new Date(+moonSet + 3600000) });
         if (moonRise && moonSet && !isNaN(moonRise) && !isNaN(moonSet)) {
-          const transit   = (+moonRise + +moonSet) / 2;
-          const underfoot = transit + 12 * 3600000;
+          const transit = (+moonRise + +moonSet) / 2, underfoot = transit + 12 * 3600000;
           minors.push({ start: new Date(transit - 1800000),   end: new Date(transit + 1800000) });
           minors.push({ start: new Date(underfoot - 1800000), end: new Date(underfoot + 1800000) });
         }
-
-        const periodLine = (p) => {
+        const periodLine = p => {
           const active = isToday && nowMs >= p.start && nowMs <= p.end;
           const past   = isToday && nowMs > p.end;
           return `<div class="cond-period${active ? ' cp-active' : ''}${past ? ' cp-past' : ''}">${fmtTime(p.start)}–${fmtTime(p.end)}</div>`;
         };
-
         if (majors.length) majorCell = majors.map(periodLine).join('');
         if (minors.length) minorCell = minors.map(periodLine).join('');
       }
@@ -1978,6 +2013,8 @@
       html += `<tr class="${isToday ? 'cond-today' : ''}">
         <td class="cond-day-col">${dayTxt}</td>
         <td>${tideLines}</td>
+        <td>${airCell}</td>
+        <td>${waterCell}</td>
         <td>${moonCell}</td>
         <td>${ratingCell}</td>
         <td>${majorCell}</td>
@@ -2017,22 +2054,39 @@
       }
 
       tideStationInfo = nearest;
-      body.innerHTML = '<div class="wind-loading">Fetching 30 days of tides…</div>';
+      body.innerHTML = '<div class="wind-loading">Fetching 30 days of conditions…</div>';
 
       const today = new Date();
       const end   = new Date(); end.setDate(end.getDate() + DAYS - 1);
       const fmt   = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-      const url   = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&begin_date=${fmt(today)}&end_date=${fmt(end)}&datum=MLLW&station=${nearest.id}&time_zone=lst_ldt&interval=hilo&units=english&format=json`;
-      const res   = await fetch(url);
-      const json  = await res.json();
 
-      if (json.error || !json.predictions?.length) {
-        body.innerHTML = '<div class="wind-loading">No tide predictions returned — solunar still shown.</div>';
-        renderConditionsTable(lat, lng);
-        return;
+      const [tideRes, airRes, waterRes] = await Promise.allSettled([
+        fetch(`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&begin_date=${fmt(today)}&end_date=${fmt(end)}&datum=MLLW&station=${nearest.id}&time_zone=lst_ldt&interval=hilo&units=english&format=json`),
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=${DAYS}`),
+        fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&daily=sea_surface_temperature&timezone=auto&forecast_days=${DAYS}`)
+      ]);
+
+      if (tideRes.status === 'fulfilled') {
+        const json = await tideRes.value.json();
+        if (json.predictions?.length) tidePredictionsAll = json.predictions;
       }
 
-      tidePredictionsAll = json.predictions;
+      dailyAirTemps = {};
+      if (airRes.status === 'fulfilled') {
+        const json = await airRes.value.json();
+        (json.daily?.time || []).forEach((t, i) => {
+          dailyAirTemps[t] = { max: json.daily.temperature_2m_max[i], min: json.daily.temperature_2m_min[i] };
+        });
+      }
+
+      dailyWaterTemps = {};
+      if (waterRes.status === 'fulfilled') {
+        const json = await waterRes.value.json();
+        (json.daily?.time || []).forEach((t, i) => {
+          dailyWaterTemps[t] = json.daily.sea_surface_temperature[i];
+        });
+      }
+
       renderConditionsTable(lat, lng);
     } catch (e) {
       body.innerHTML = '<div class="wind-loading">Could not load tide data.</div>';
@@ -3499,13 +3553,17 @@
     if (body) body.innerHTML = '<div class="wind-loading">Fetching wind data…</div>';
     document.getElementById('wind-location').textContent = locationName || `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=mph&timezone=auto`;
-      const res  = await fetch(url);
-      const json = await res.json();
-      const data = json.current;
-      windCache = { data, location: locationName, lat, lng, ts: Date.now() };
-      conditionsDay = 0;
-      renderWindWidget(data, locationName);
+      const [weatherRes, marineRes] = await Promise.allSettled([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m&wind_speed_unit=mph&timezone=auto`),
+        fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&current=sea_surface_temperature&timezone=auto`)
+      ]);
+      const weatherJson = weatherRes.status === 'fulfilled' ? await weatherRes.value.json() : {};
+      const marineJson  = marineRes.status  === 'fulfilled' ? await marineRes.value.json()  : {};
+      const data      = weatherJson.current || {};
+      const airTemp   = data.temperature_2m ?? null;
+      const waterTemp = marineJson.current?.sea_surface_temperature ?? null;
+      windCache = { data, location: locationName, lat, lng, airTemp, waterTemp, ts: Date.now() };
+      renderWindWidget(data, locationName, airTemp, waterTemp);
       renderSolunarWidget(lat, lng);
       fetchTideData(lat, lng);
     } catch (e) {
