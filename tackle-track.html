@@ -704,6 +704,17 @@
     .login-link-btn { background: none; border: none; color: #64748b; font-size: 0.82rem; cursor: pointer; font-family: inherit; text-decoration: underline; padding: 0; }
     .login-link-btn:hover { color: #94a3b8; }
     .login-success { font-size: 0.82rem; color: #4ade80; text-align: center; margin-top: 10px; }
+    .login-btn-google {
+      background: white;
+      color: #3c4043;
+      border: 1.5px solid #dadce0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    .login-btn-google:hover:not(:disabled) { background: #f8f9fa; border-color: #c6c6c6; }
 
     /* ── Header user chip ── */
     .header-user {
@@ -1169,6 +1180,11 @@
       <div style="text-align:center;margin-top:12px">
         <button class="login-link-btn" onclick="setLoginMode('forgot')">Forgot password?</button>
       </div>
+      <div class="login-divider"><span>or</span></div>
+      <button class="login-btn login-btn-google" id="login-google-btn" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+        Sign in with Google
+      </button>
       <div class="login-divider"><span>new here?</span></div>
       <button class="login-btn login-btn-secondary" onclick="setLoginMode('create')">Create Account</button>
     </div>
@@ -1176,8 +1192,24 @@
     <!-- Create Account panel -->
     <div id="login-create-panel" style="display:none">
       <button class="login-btn" id="login-create-btn" onclick="createAccount()">Create Account</button>
+      <div class="login-divider"><span>or</span></div>
+      <button class="login-btn login-btn-google" id="login-google-btn-create" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+        Sign up with Google
+      </button>
       <div style="text-align:center;margin-top:12px">
         <button class="login-link-btn" onclick="setLoginMode('signin')">Already have an account? Sign in</button>
+      </div>
+    </div>
+
+    <!-- Google username panel (new Google users pick a username) -->
+    <div id="login-google-panel" style="display:none">
+      <p style="color:#94a3b8;font-size:0.85rem;text-align:center;margin-bottom:14px">Welcome! Choose a username for TackleTrack.</p>
+      <input class="login-input" id="login-google-username" type="text" placeholder="Username" autocomplete="off" autocapitalize="none" maxlength="32" style="margin-bottom:0" />
+      <div class="login-error" id="login-google-error"></div>
+      <button class="login-btn" id="login-google-continue-btn" onclick="completeGoogleSignUp()">Continue</button>
+      <div style="text-align:center;margin-top:12px">
+        <button class="login-link-btn" onclick="cancelGoogleSignUp()">Cancel</button>
       </div>
     </div>
 
@@ -1581,6 +1613,11 @@
   let dailyAirTemps       = {};  // { 'YYYY-MM-DD': { max, min } }
   let dailyWaterTemps     = {};  // { 'YYYY-MM-DD': temp_c }
 
+  // ── Temperature widget state ───────────────────────────────────────────────
+  let nearestTideStation = null;
+  try { localStorage.removeItem('tt_tide_station'); } catch(_) {}
+  const tempState = { air: null, water: null, waterLoading: false };
+
   const USERS_KEY = 'tt_users';
   let activeUser  = null;
   let pendingUsername = null; // set by signIn() so onAuthStateChanged uses the typed username
@@ -1644,6 +1681,9 @@
     showView('people');
     registerProfile();
     loadProfilePic(username).then(url => setHeaderAvatar(url));
+    // Pre-load NOAA stations in background while user is on People tab
+    // so water temp is instant when they open the Dashboard
+    preloadNoaaStations();
 
     // Launch welcome tour for new signups
     if (isNewSignup) {
@@ -1683,6 +1723,7 @@
     document.getElementById('login-signin-panel').style.display  = mode === 'signin'  ? 'block' : 'none';
     document.getElementById('login-create-panel').style.display  = mode === 'create'  ? 'block' : 'none';
     document.getElementById('login-forgot-panel').style.display  = mode === 'forgot'  ? 'block' : 'none';
+    document.getElementById('login-google-panel').style.display  = 'none';
     document.getElementById('login-username').style.display      = mode === 'forgot'  ? 'none'  : 'block';
     const emailEl = document.getElementById('login-email');
     emailEl.style.display    = (mode === 'create' || mode === 'forgot') ? 'block' : 'none';
@@ -1798,6 +1839,83 @@
   function fillUsername(username) {
     document.getElementById('login-username').value = username;
     document.getElementById('login-password').focus();
+  }
+
+  const GOOGLE_SVG = `<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>`;
+
+  function setGoogleBtnsBusy(busy) {
+    const btn1 = document.getElementById('login-google-btn');
+    const btn2 = document.getElementById('login-google-btn-create');
+    if (busy) {
+      if (btn1) { btn1.disabled = true; btn1.textContent = 'Connecting…'; }
+      if (btn2) { btn2.disabled = true; btn2.textContent = 'Connecting…'; }
+    } else {
+      if (btn1) { btn1.disabled = false; btn1.innerHTML = GOOGLE_SVG + ' Sign in with Google'; }
+      if (btn2) { btn2.disabled = false; btn2.innerHTML = GOOGLE_SVG + ' Sign up with Google'; }
+    }
+  }
+
+  async function signInWithGoogle() {
+    hideLoginMessages();
+    setGoogleBtnsBusy(true);
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+      // onAuthStateChanged handles the rest
+    } catch (e) {
+      setGoogleBtnsBusy(false);
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+      if (e.code === 'auth/account-exists-with-different-credential')
+        showLoginError('An account already exists with this email. Please sign in with your password instead.');
+      else
+        showLoginError(`Google sign-in failed. (${e.code || e.message})`);
+    }
+  }
+
+  function showGoogleUsernamePanel() {
+    document.getElementById('login-username').style.display = 'none';
+    document.getElementById('login-email').style.display    = 'none';
+    document.getElementById('login-password').style.display = 'none';
+    document.getElementById('login-signin-panel').style.display  = 'none';
+    document.getElementById('login-create-panel').style.display  = 'none';
+    document.getElementById('login-forgot-panel').style.display  = 'none';
+    document.getElementById('login-google-panel').style.display  = 'block';
+    setTimeout(() => document.getElementById('login-google-username').focus(), 100);
+  }
+
+  async function completeGoogleSignUp() {
+    const user = auth.currentUser;
+    if (!user) return;
+    const username = document.getElementById('login-google-username').value.trim();
+    const errEl = document.getElementById('login-google-error');
+    errEl.textContent = '';
+    if (!username) { errEl.textContent = 'Please choose a username.'; return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) { errEl.textContent = 'Username may only contain letters, numbers, and underscores.'; return; }
+    setBusy('login-google-continue-btn', true, 'Setting up…');
+    try {
+      const existing = await db.collection('usernames').doc(username.toLowerCase()).get();
+      if (existing.exists) {
+        errEl.textContent = 'That username is already taken.';
+        setBusy('login-google-continue-btn', false, 'Continue');
+        return;
+      }
+      await db.collection('usernames').doc(username.toLowerCase()).set({
+        username, usernameLower: username.toLowerCase(), email: user.email,
+        uid: user.uid, joinedAt: new Date().toISOString()
+      });
+      await user.updateProfile({ displayName: username });
+      pendingUsername = username;
+      document.getElementById('login-screen').classList.add('hidden');
+      await startApp(username);
+    } catch (e) {
+      setBusy('login-google-continue-btn', false, 'Continue');
+      document.getElementById('login-google-error').textContent = `Could not create account. (${e.code || e.message})`;
+    }
+  }
+
+  function cancelGoogleSignUp() {
+    auth.signOut();
+    // onAuthStateChanged will show login screen again
   }
 
   // ── Utils ─────────────────────────────────────────────────────────────────
@@ -1952,17 +2070,118 @@
     `;
   }
 
-  function renderTempWidget(airTemp, waterTemp) {
+  // ── Temperature widget ────────────────────────────────────────────────────
+  function updateTempWidget() {
     const el = document.getElementById('temp-widget');
     if (!el) return;
-    if (airTemp == null && waterTemp == null) return;
+    if (tempState.air == null) { el.style.display = 'none'; return; }
     el.style.display = '';
+    const fmt = c => `${Math.round(c * 9/5 + 32)}°F / ${Math.round(c)}°C`;
+    const waterVal = tempState.water != null
+      ? fmt(tempState.water)
+      : tempState.waterLoading
+        ? '<span style="opacity:.5;font-size:0.85em">Loading…</span>'
+        : '—';
     document.getElementById('temp-body').innerHTML = `
       <div class="stats-grid" style="margin-bottom:0">
-        ${airTemp   != null ? `<div class="stat-card"><div class="val">${Math.round(airTemp * 9/5 + 32)}°F / ${Math.round(airTemp)}°C</div><div class="lbl">Air Temperature</div></div>` : ''}
-        ${waterTemp != null ? `<div class="stat-card"><div class="val" style="color:#0891b2">${Math.round(waterTemp * 9/5 + 32)}°F / ${Math.round(waterTemp)}°C</div><div class="lbl">Water Temperature</div></div>` : ''}
+        <div class="stat-card"><div class="val">${fmt(tempState.air)}</div><div class="lbl">Air Temperature</div></div>
+        <div class="stat-card"><div class="val" style="color:#0891b2">${waterVal}</div><div class="lbl">Water Temperature</div></div>
       </div>
     `;
+  }
+
+  // Stations list is preloaded at login so it's ready before the user opens the dashboard
+  let _noaaStationsPromise = null;
+  function preloadNoaaStations() {
+    if (_noaaStationsPromise) return;
+    _noaaStationsPromise = fetch('https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions')
+      .then(r => r.json())
+      .catch(() => ({ stations: [] }));
+  }
+
+  // Returns true if location is coastal/ocean (water temp found), false if inland
+  async function fetchNoaaWaterTemp(lat, lng) {
+    try {
+      // Primary: Open-Meteo Marine API (satellite SST, global ocean coverage)
+      const marine = await fetch(
+        `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=sea_surface_temperature&forecast_days=1&timezone=auto`
+      ).then(r => r.json());
+
+      const temps = marine.hourly?.sea_surface_temperature;
+      const times = marine.hourly?.time;
+      if (Array.isArray(temps) && Array.isArray(times)) {
+        const now = Date.now();
+        let best = null;
+        for (let i = 0; i < temps.length; i++) {
+          if (temps[i] != null && new Date(times[i]).getTime() <= now + 3600000) best = temps[i];
+        }
+        if (best != null) {
+          tempState.water = best; // already Celsius
+          if (windCache) windCache.waterTemp = tempState.water;
+          tempState.waterLoading = false;
+          updateTempWidget();
+          return true; // coastal
+        }
+      }
+    } catch(_) {}
+
+    // Fallback: NOAA sensor stations (more accurate when available)
+    try {
+      preloadNoaaStations();
+      const stJson = await _noaaStationsPromise;
+      const candidates = (stJson.stations || [])
+        .map(st => ({ ...st, dist: Math.hypot((st.lat||0) - lat, (st.lng||0) - lng) }))
+        .filter(st => st.dist < 5)
+        .sort((a, b) => a.dist - b.dist)
+        .slice(0, 8);
+
+      for (const st of candidates) {
+        try {
+          const json = await fetch(`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_temperature&date=latest&station=${st.id}&time_zone=lst_ldt&units=english&format=json`).then(r => r.json());
+          const arr = json.data;
+          if (Array.isArray(arr) && arr.length) {
+            const f = parseFloat(arr[arr.length - 1].v);
+            if (!isNaN(f)) {
+              tempState.water = (f - 32) * 5 / 9;
+              if (windCache) windCache.waterTemp = tempState.water;
+              tempState.waterLoading = false;
+              updateTempWidget();
+              return true; // coastal
+            }
+          }
+        } catch(_) {}
+      }
+    } catch(_) {}
+
+    // Second fallback: USGS real-time sensors (lakes & rivers)
+    try {
+      const margin = 0.5;
+      const usgsJson = await fetch(
+        `https://waterservices.usgs.gov/nwis/iv/?format=json&parameterCd=00010&bBox=${lng-margin},${lat-margin},${lng+margin},${lat+margin}&siteType=LK,ST&siteStatus=active`
+      ).then(r => r.json());
+
+      const series = usgsJson.value?.timeSeries || [];
+      let best = null, bestDist = Infinity;
+      for (const ts of series) {
+        const loc = ts.sourceInfo?.geoLocation?.geogLocation;
+        if (!loc) continue;
+        const d = Math.hypot((loc.latitude||0) - lat, (loc.longitude||0) - lng);
+        const vals = ts.values?.[0]?.value;
+        if (!vals?.length) continue;
+        const v = parseFloat(vals[vals.length - 1].value);
+        if (isNaN(v) || v < -2 || v > 40) continue;
+        if (d < bestDist) { bestDist = d; best = v; }
+      }
+
+      if (best != null) {
+        tempState.water = best; // already Celsius
+        if (windCache) windCache.waterTemp = tempState.water;
+      }
+    } catch(_) {}
+
+    tempState.waterLoading = false;
+    updateTempWidget();
+    return false; // inland/lake — water temp may be set but no tides/solunar
   }
 
   async function fetchWindData(force) {
@@ -1971,12 +2190,20 @@
       renderWindWidget(windCache.data, windCache.location);
       if (windCache.lat != null) {
         renderWindWidget(windCache.data, windCache.location);
-        renderTempWidget(windCache.airTemp, windCache.waterTemp);
-        if (tidePredictionsAll.length) {
-          renderConditionsTable(windCache.lat, windCache.lng);
+        tempState.air = windCache.airTemp;
+        tempState.water = windCache.waterTemp;
+        tempState.waterLoading = false;
+        updateTempWidget();
+        const condEl = document.getElementById('conditions-widget');
+        if (windCache.isCoastal) {
+          if (tidePredictionsAll.length) {
+            renderConditionsTable(windCache.lat, windCache.lng);
+          } else {
+            renderSolunarWidget(windCache.lat, windCache.lng);
+            fetchTideData(windCache.lat, windCache.lng);
+          }
         } else {
-          renderSolunarWidget(windCache.lat, windCache.lng);
-          fetchTideData(windCache.lat, windCache.lng);
+          if (condEl) condEl.style.display = 'none';
         }
       }
       return;
@@ -1996,29 +2223,27 @@
       const mapLink = document.getElementById('wind-map-link');
       if (mapLink) mapLink.style.display = 'none';
       try {
-        // Reverse geocode for a readable location name (using Open-Meteo doesn't provide names)
-        let locationName = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
-        try {
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
-          const geoJson = await geoRes.json();
-          const a = geoJson.address || {};
-          locationName = a.city || a.town || a.village || a.county || locationName;
-        } catch (_) {}
+        tempState.air = null; tempState.water = null; tempState.waterLoading = true;
 
-        const [weatherRes, marineRes] = await Promise.allSettled([
-          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m&wind_speed_unit=mph&timezone=auto`),
-          fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&current=sea_surface_temperature&timezone=auto`)
+        let locationName = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+        const [weatherJson, isCoastal] = await Promise.all([
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m&wind_speed_unit=mph&timezone=auto`).then(r => r.json()).catch(() => ({})),
+          fetchNoaaWaterTemp(lat, lon),
+          fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`).then(r => r.json()).then(j => { const a = j.address||{}; locationName = a.city||a.town||a.village||a.county||locationName; }).catch(()=>{})
         ]);
-        const weatherJson = weatherRes.status === 'fulfilled' ? await weatherRes.value.json() : {};
-        const marineJson  = marineRes.status  === 'fulfilled' ? await marineRes.value.json()  : {};
-        const data      = weatherJson.current || {};
-        const airTemp   = data.temperature_2m ?? null;
-        const waterTemp = marineJson.current?.sea_surface_temperature ?? null;
-        windCache = { data, location: locationName, lat, lng: lon, airTemp, waterTemp, ts: Date.now() };
+        const data    = weatherJson.current || {};
+        const airTemp = data.temperature_2m ?? null;
+        tempState.air = airTemp;
+        windCache = { data, location: locationName, lat, lng: lon, airTemp, waterTemp: tempState.water, isCoastal, ts: Date.now() };
         renderWindWidget(data, locationName);
-        renderTempWidget(airTemp, waterTemp);
-        renderSolunarWidget(lat, lon);
-        fetchTideData(lat, lon);
+        updateTempWidget();
+        const condEl = document.getElementById('conditions-widget');
+        if (isCoastal) {
+          renderSolunarWidget(lat, lon);
+          fetchTideData(lat, lon);
+        } else {
+          if (condEl) condEl.style.display = 'none';
+        }
       } catch (e) {
         if (body) body.innerHTML = '<div class="wind-loading">Could not load wind data. Check your connection.</div>';
         const mapLink = document.getElementById('wind-map-link');
@@ -2192,8 +2417,8 @@
     body.innerHTML = '<div class="wind-loading">Looking up tide station…</div>';
 
     try {
-      const stRes  = await fetch('https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions');
-      const stJson = await stRes.json();
+      preloadNoaaStations();
+      const stJson = await _noaaStationsPromise;
       const stations = stJson.stations || [];
 
       let nearest = null, minDist = Infinity;
@@ -2210,6 +2435,11 @@
       }
 
       tideStationInfo = nearest;
+      // Cache the station so fetchNoaaWaterTemp can skip the stations-list fetch next time
+      if (!nearestTideStation || nearestTideStation.id !== nearest.id) {
+        nearestTideStation = { id: nearest.id, name: nearest.name, state: nearest.state || '', lat: nearest.lat, lng: nearest.lng };
+        try { localStorage.setItem('tt_tide_station', JSON.stringify(nearestTideStation)); } catch(_) {}
+      }
       body.innerHTML = '<div class="wind-loading">Fetching 30 days of conditions…</div>';
 
       const today = new Date();
@@ -2794,14 +3024,19 @@
   }
 
   async function followUser(username) {
-    const now = new Date().toISOString();
-    const batch = db.batch();
-    batch.set(db.doc(`users/${activeUser}/following/${username}`), { followedAt: now });
-    batch.set(db.doc(`users/${username}/followers/${activeUser}`), { followedAt: now });
-    await batch.commit();
-    if (!followingList.includes(username)) followingList.push(username);
-    renderPeopleView();
-    renderSearchResults(peopleSearchResults);
+    try {
+      const now = new Date().toISOString();
+      const batch = db.batch();
+      batch.set(db.doc(`users/${activeUser}/following/${username}`), { followedAt: now });
+      batch.set(db.doc(`users/${username}/followers/${activeUser}`), { followedAt: now });
+      await batch.commit();
+      if (!followingList.includes(username)) followingList.push(username);
+      renderPeopleView();
+      renderSearchResults(peopleSearchResults);
+    } catch (e) {
+      console.error('followUser error:', e);
+      alert(`Could not follow user. (${e.code || e.message})`);
+    }
   }
 
   async function unfollowUser(username) {
@@ -3710,19 +3945,25 @@
     if (body) body.innerHTML = '<div class="wind-loading">Fetching wind data…</div>';
     document.getElementById('wind-location').textContent = locationName || `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
     try {
-      const [weatherRes, marineRes] = await Promise.allSettled([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m&wind_speed_unit=mph&timezone=auto`),
-        fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&current=sea_surface_temperature&timezone=auto`)
+      tempState.air = null; tempState.water = null; tempState.waterLoading = true;
+
+      const [weatherJson, isCoastal] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m&wind_speed_unit=mph&timezone=auto`).then(r => r.json()).catch(() => ({})),
+        fetchNoaaWaterTemp(lat, lng)
       ]);
-      const weatherJson = weatherRes.status === 'fulfilled' ? await weatherRes.value.json() : {};
-      const marineJson  = marineRes.status  === 'fulfilled' ? await marineRes.value.json()  : {};
-      const data      = weatherJson.current || {};
-      const airTemp   = data.temperature_2m ?? null;
-      const waterTemp = marineJson.current?.sea_surface_temperature ?? null;
-      windCache = { data, location: locationName, lat, lng, airTemp, waterTemp, ts: Date.now() };
-      renderWindWidget(data, locationName, airTemp, waterTemp);
-      renderSolunarWidget(lat, lng);
-      fetchTideData(lat, lng);
+      const data    = weatherJson.current || {};
+      const airTemp = data.temperature_2m ?? null;
+      tempState.air = airTemp;
+      windCache = { data, location: locationName, lat, lng, airTemp, waterTemp: tempState.water, isCoastal, ts: Date.now() };
+      renderWindWidget(data, locationName);
+      updateTempWidget();
+      const condEl = document.getElementById('conditions-widget');
+      if (isCoastal) {
+        renderSolunarWidget(lat, lng);
+        fetchTideData(lat, lng);
+      } else {
+        if (condEl) condEl.style.display = 'none';
+      }
     } catch (e) {
       if (body) body.innerHTML = '<div class="wind-loading">Could not load wind data. Check your connection.</div>';
     }
@@ -3861,6 +4102,9 @@
   });
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('login-create-panel').style.display !== 'none' ? createAccount() : signIn();
+  });
+  document.getElementById('login-google-username').addEventListener('keydown', e => {
+    if (e.key === 'Enter') completeGoogleSignUp();
   });
 
   // ── Welcome Tour ──────────────────────────────────────────────────────────
@@ -4003,6 +4247,22 @@
 
   auth.onAuthStateChanged(async user => {
     if (user) {
+      const isGoogle = user.providerData.some(p => p.providerId === 'google.com');
+      if (isGoogle && !pendingUsername) {
+        // Look up stored username by UID
+        try {
+          const snap = await db.collection('usernames').where('uid', '==', user.uid).limit(1).get();
+          if (!snap.empty) {
+            pendingUsername = snap.docs[0].data().username || snap.docs[0].data().usernameLower;
+          } else {
+            // New Google user — prompt for username
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            showGoogleUsernamePanel();
+            return;
+          }
+        } catch {}
+      }
       const username = pendingUsername || user.displayName || user.email.split('@')[0];
       pendingUsername = null;
       await startApp(username);
