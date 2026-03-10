@@ -999,6 +999,146 @@
     .rt-bubble-wrap.mine { align-items: flex-end; }
     .rt-bubble-wrap.theirs { align-items: flex-start; }
     .rt-time { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Welcome Tour ── */
+    .tour-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .tour-overlay.hidden { display: none; }
+    .tour-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      pointer-events: auto;
+      z-index: 9998;
+    }
+    .tour-spotlight {
+      position: fixed;
+      border-radius: 12px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.65);
+      z-index: 9999;
+      pointer-events: none;
+      transition: all 0.35s ease;
+    }
+    .tour-tooltip {
+      position: fixed;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      width: calc(100% - 32px);
+      max-width: 340px;
+      z-index: 10000;
+      pointer-events: auto;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      transition: all 0.35s ease;
+    }
+    .tour-tooltip h3 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .tour-tooltip p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .tour-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .tour-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .tour-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.2s;
+    }
+    .tour-dot.active { background: var(--accent); }
+    .tour-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .tour-skip {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.82rem;
+      cursor: pointer;
+      padding: 6px 10px;
+      font-family: inherit;
+    }
+    .tour-skip:hover { color: var(--text); }
+    .tour-back {
+      background: none;
+      border: 1.5px solid var(--border);
+      color: var(--muted);
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .tour-back:hover { background: var(--bg); color: var(--text); }
+    .tour-next {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .tour-next:hover { background: var(--accent-dark); }
+
+    /* Tour welcome step (no spotlight) */
+    .tour-welcome {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    .tour-welcome-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      text-align: center;
+      max-width: 340px;
+      width: calc(100% - 32px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    }
+    .tour-welcome-card .tour-emoji { font-size: 3rem; margin-bottom: 12px; }
+    .tour-welcome-card h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .tour-welcome-card h2 span { color: #38bdf8; }
+    .tour-welcome-card p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
@@ -1221,6 +1361,9 @@
   </button>
 </nav>
 
+<!-- ── Welcome Tour ── -->
+<div id="tour-overlay" class="tour-overlay hidden"></div>
+
 <!-- ── Catch Modal ── -->
 <div class="overlay" id="catch-overlay">
   <div class="modal" id="catch-modal">
@@ -1441,6 +1584,7 @@
   const USERS_KEY = 'tt_users';
   let activeUser  = null;
   let pendingUsername = null; // set by signIn() so onAuthStateChanged uses the typed username
+  let isNewSignup = false; // set by createAccount() to trigger welcome tour
 
   // ── Firebase ──────────────────────────────────────────────────────────────
   // Paste your Firebase config here after creating a project at console.firebase.google.com
@@ -1500,6 +1644,12 @@
     showView('people');
     registerProfile();
     loadProfilePic(username).then(url => setHeaderAvatar(url));
+
+    // Launch welcome tour for new signups
+    if (isNewSignup) {
+      isNewSignup = false;
+      setTimeout(() => startWelcomeTour(username), 400);
+    }
   }
 
   function authEmail(username) {
@@ -1594,6 +1744,7 @@
     hideLoginMessages();
     setBusy('login-create-btn', true, 'Creating…');
     pendingUsername = username;
+    isNewSignup = true;
     try {
       // Check username availability
       const existing = await db.collection('usernames').doc(username.toLowerCase()).get();
@@ -1606,6 +1757,7 @@
       });
     } catch (e) {
       pendingUsername = null;
+      isNewSignup = false;
       setBusy('login-create-btn', false, 'Create Account');
       if (e.code === 'auth/email-already-in-use') showLoginError('An account with that email already exists.');
       else if (e.code === 'auth/weak-password') showLoginError('Password must be at least 6 characters.');
@@ -2823,7 +2975,8 @@
               <button class="btn btn-primary btn-sm" id="profile-email-save-btn" onclick="saveProfileEmail()">Save</button>
             </div>
           </div>
-        </div>` : ''}
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="closeUserStats();replayWelcomeTour()" style="width:100%;margin-bottom:14px">Replay Welcome Tour</button>` : ''}
 
         <div class="stats-grid">
           <div class="stat-card"><div class="val">${uCatches.length}</div><div class="lbl">Catches</div></div>
@@ -3709,6 +3862,140 @@
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('login-create-panel').style.display !== 'none' ? createAccount() : signIn();
   });
+
+  // ── Welcome Tour ──────────────────────────────────────────────────────────
+  function startWelcomeTour(username) {
+    const overlay = document.getElementById('tour-overlay');
+    overlay.classList.remove('hidden');
+
+    const steps = [
+      {
+        type: 'welcome',
+        emoji: '🎣',
+        title: `Welcome to Tackle<span>Track</span>, ${username}!`,
+        text: "Let's take a quick look around so you can start logging catches and connecting with other anglers.",
+        btnText: "Show me around"
+      },
+      {
+        target: '#nav-catches',
+        title: 'Log Your Catches',
+        text: 'This is where you track every fish you reel in — species, weight, location, photos, and more. Tap the + button to log your first catch!',
+        btnText: 'Next'
+      },
+      {
+        target: '#nav-people',
+        title: 'Find Anglers',
+        text: 'Discover and follow other anglers to see their catches in your feed. The fishing community is waiting!',
+        btnText: 'Next'
+      },
+      {
+        target: '#nav-messages',
+        title: 'Reel Talk',
+        text: 'Message other anglers directly. Share tips, plan trips, or just talk fish.',
+        btnText: 'Next'
+      },
+      {
+        target: '#nav-dashboard',
+        title: 'Your Dashboard',
+        text: 'See your stats at a glance — total catches, species count, and your recent activity all in one spot.',
+        btnText: 'Next'
+      },
+      {
+        target: '#nav-stats',
+        title: 'Performance Stats',
+        text: 'Dive deep into your fishing data — biggest catches, species breakdown, and trends over time.',
+        btnText: "Let's fish!"
+      }
+    ];
+
+    let current = 0;
+
+    function renderStep() {
+      const step = steps[current];
+
+      if (step.type === 'welcome') {
+        overlay.innerHTML = `
+          <div class="tour-backdrop"></div>
+          <div class="tour-welcome">
+            <div class="tour-welcome-card">
+              <div class="tour-emoji">${step.emoji}</div>
+              <h2>${step.title}</h2>
+              <p>${step.text}</p>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <button class="tour-next" style="width:100%" id="tour-start-btn">${step.btnText}</button>
+                <button class="tour-skip" id="tour-skip-btn">Skip tour</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('tour-start-btn').addEventListener('click', () => { current++; renderStep(); });
+        document.getElementById('tour-skip-btn').addEventListener('click', endTour);
+        return;
+      }
+
+      // Highlight a nav button
+      const el = document.querySelector(step.target);
+      if (!el) { current++; renderStep(); return; }
+      const rect = el.getBoundingClientRect();
+      const pad = 6;
+
+      // Build dots
+      const totalDots = steps.length - 1; // exclude welcome
+      const dotIndex = current - 1;
+      const dots = Array.from({length: totalDots}, (_, i) =>
+        `<div class="tour-dot ${i === dotIndex ? 'active' : ''}"></div>`
+      ).join('');
+
+      // Position tooltip above nav
+      overlay.innerHTML = `
+        <div class="tour-spotlight" style="
+          top: ${rect.top - pad}px;
+          left: ${rect.left - pad}px;
+          width: ${rect.width + pad * 2}px;
+          height: ${rect.height + pad * 2}px;
+        "></div>
+        <div class="tour-tooltip" id="tour-tooltip" style="
+          bottom: ${window.innerHeight - rect.top + 14}px;
+          left: 50%;
+          transform: translateX(-50%);
+        ">
+          <h3>${step.title}</h3>
+          <p>${step.text}</p>
+          <div class="tour-footer">
+            <div class="tour-dots">${dots}</div>
+            <div class="tour-btns">
+              <button class="tour-skip" id="tour-skip-btn">Skip</button>
+              ${current > 1 ? '<button class="tour-back" id="tour-back-btn">Back</button>' : ''}
+              <button class="tour-next" id="tour-next-btn">${step.btnText}</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('tour-next-btn').addEventListener('click', () => {
+        if (current < steps.length - 1) { current++; renderStep(); }
+        else endTour();
+      });
+      const backBtn = document.getElementById('tour-back-btn');
+      if (backBtn) backBtn.addEventListener('click', () => { current--; renderStep(); });
+      document.getElementById('tour-skip-btn').addEventListener('click', endTour);
+    }
+
+    function endTour() {
+      overlay.classList.add('hidden');
+      overlay.innerHTML = '';
+      localStorage.setItem('tackletrack_tour_done', '1');
+      // Land user on catches tab so they can log their first catch
+      showView('catches');
+    }
+
+    renderStep();
+  }
+
+  function replayWelcomeTour() {
+    localStorage.removeItem('tackletrack_tour_done');
+    startWelcomeTour(activeUser);
+  }
 
   // Show loading while Firebase checks auth state
   document.getElementById('login-screen').classList.add('hidden');
