@@ -1346,6 +1346,10 @@
         <button class="btn btn-primary" onclick="searchUsers()">Search</button>
       </div>
       <div id="people-search-results"></div>
+      <div class="sec-header" style="margin-top:4px" id="suggestions-header">
+        <span class="sec-title">Suggested Anglers</span>
+      </div>
+      <div id="suggestions-list"></div>
       <div class="sec-header" style="margin-top:4px">
         <span class="sec-title">Following</span>
         <span id="following-count" style="font-size:0.82rem;color:var(--muted)"></span>
@@ -1364,7 +1368,7 @@
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
       <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
     </svg>
-    People
+    Feed
   </button>
   <button onclick="showView('dashboard')" id="nav-dashboard">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -3031,6 +3035,7 @@
       batch.set(db.doc(`users/${username}/followers/${activeUser}`), { followedAt: now });
       await batch.commit();
       if (!followingList.includes(username)) followingList.push(username);
+      renderSuggestions();
       renderPeopleView();
       renderSearchResults(peopleSearchResults);
     } catch (e) {
@@ -3045,6 +3050,7 @@
     batch.delete(db.doc(`users/${username}/followers/${activeUser}`));
     await batch.commit();
     followingList = followingList.filter(u => u !== username);
+    renderSuggestions();
     renderPeopleView();
     renderSearchResults(peopleSearchResults);
   }
@@ -3076,6 +3082,33 @@
     el.innerHTML = `<div style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Results</div>` +
       users.map(u => userCardHTML(u, true)).join('') +
       `<div class="divider"></div>`;
+  }
+
+  async function renderSuggestions() {
+    const el = document.getElementById('suggestions-list');
+    const hdr = document.getElementById('suggestions-header');
+    if (!el) return;
+    el.innerHTML = `<div style="color:var(--muted);font-size:0.83rem;padding:8px 0">Loading…</div>`;
+    try {
+      // Grab up to 30 recent users, exclude self and already-following
+      const snap = await db.collection('usernames').limit(30).get();
+      const all = snap.docs.map(d => d.data().username).filter(u =>
+        u && u.toLowerCase() !== activeUser.toLowerCase() && !followingList.map(f => f.toLowerCase()).includes(u.toLowerCase())
+      );
+      // Shuffle and pick up to 5
+      const shuffled = all.sort(() => 0.5 - Math.random()).slice(0, 5);
+      if (shuffled.length === 0) {
+        if (hdr) hdr.style.display = 'none';
+        el.innerHTML = '';
+        return;
+      }
+      if (hdr) hdr.style.display = '';
+      await Promise.all(shuffled.map(u => loadProfilePic(u)));
+      el.innerHTML = shuffled.map(u => userCardHTML(u, true)).join('') + `<div class="divider"></div>`;
+    } catch {
+      el.innerHTML = '';
+      if (hdr) hdr.style.display = 'none';
+    }
   }
 
   async function renderPeopleView() {
@@ -3507,7 +3540,7 @@
     document.getElementById('people-feed-panel').style.display    = tab === 'feed'    ? 'block' : 'none';
     document.getElementById('people-anglers-panel').style.display = tab === 'anglers' ? 'block' : 'none';
     if (tab === 'feed')    renderFeed();
-    if (tab === 'anglers') renderPeopleView();
+    if (tab === 'anglers') { renderSuggestions(); renderPeopleView(); }
   }
 
   // ── Likes & comments ──────────────────────────────────────────────────────
