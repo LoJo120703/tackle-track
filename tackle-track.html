@@ -4325,7 +4325,7 @@
             <div style="font-weight:700;font-size:0.95rem">${esc(u.username)}</div>
             <div style="font-size:0.78rem;color:var(--muted)">${esc(u.email || '—')}</div>
           </div>
-          <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser('${esc(u.username)}','${esc(u.uid||'')}')">Delete</button>
+          <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser('${esc(u.username)}')">Delete</button>
         </div>
       `).join('');
     } catch (e) {
@@ -4333,8 +4333,8 @@
     }
   }
 
-  async function confirmDeleteUser(username, uid) {
-    if (!confirm(`Delete "${username}"? This will wipe all their data and ban them from signing in again.`)) return;
+  async function confirmDeleteUser(username) {
+    if (!confirm(`Delete "${username}"? This will remove all their data.`)) return;
     const body = document.getElementById('admin-body');
     body.innerHTML = `<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:12px">Deleting ${esc(username)}…</div>`;
     try {
@@ -4351,7 +4351,6 @@
       const batch = db.batch();
       batch.delete(db.collection('usernames').doc(username.toLowerCase()));
       batch.delete(db.collection('users').doc(username));
-      if (uid) batch.set(db.collection('banned').doc(uid), { username, bannedAt: new Date().toISOString(), bannedBy: activeUser });
       await batch.commit();
 
       // Reload list
@@ -4368,19 +4367,6 @@
 
   auth.onAuthStateChanged(async user => {
     if (user) {
-      // Check if user has been banned
-      try {
-        const bannedDoc = await db.collection('banned').doc(user.uid).get();
-        if (bannedDoc.exists) {
-          await auth.signOut();
-          document.getElementById('loading-overlay').classList.add('hidden');
-          document.getElementById('login-screen').classList.remove('hidden');
-          setLoginMode('signin');
-          showLoginError('This account has been suspended.');
-          return;
-        }
-      } catch (_) {}
-
       const isGoogle = user.providerData.some(p => p.providerId === 'google.com');
       if (isGoogle && !pendingUsername) {
         // Look up stored username by UID
