@@ -1539,6 +1539,20 @@
   </div>
 </div>
 
+<!-- ── Admin Panel overlay ── -->
+<div class="overlay" id="admin-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>Admin Panel</h2>
+      <button class="modal-close" onclick="closeAdminPanel()">&times;</button>
+    </div>
+    <div class="modal-body" id="admin-body">
+      <div class="empty"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
 <!-- ── User stats overlay ── -->
 <div class="overlay" id="user-stats-overlay">
   <div class="modal">
@@ -3252,7 +3266,8 @@
             </div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="closeUserStats();replayWelcomeTour()" style="width:100%;margin-bottom:14px">Replay Welcome Tour</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="closeUserStats();replayWelcomeTour()" style="width:100%;margin-bottom:14px">Replay Welcome Tour</button>
+        ${activeUser.toLowerCase() === 'loganjohnson' ? `<button class="btn btn-sm" onclick="closeUserStats();openAdminPanel()" style="width:100%;margin-bottom:14px;background:#1e293b;color:#f87171;border:1.5px solid #f87171">Admin Panel</button>` : ''}` : ''}
 
         <div class="stats-grid">
           <div class="stat-card"><div class="val">${uCatches.length}</div><div class="lbl">Catches</div></div>
@@ -4282,12 +4297,90 @@
     startWelcomeTour(activeUser);
   }
 
+  // ── Admin Panel ───────────────────────────────────────────────────────────
+  const ADMIN_USER = 'loganjohnson';
+
+  function openAdminPanel() {
+    document.getElementById('admin-overlay').classList.add('open');
+    loadAdminUsers();
+  }
+
+  function closeAdminPanel() {
+    document.getElementById('admin-overlay').classList.remove('open');
+  }
+
+  async function loadAdminUsers() {
+    const body = document.getElementById('admin-body');
+    body.innerHTML = `<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:12px">Loading users…</div>`;
+    try {
+      const snap = await db.collection('usernames').orderBy('usernameLower').get();
+      const users = snap.docs.map(d => d.data()).filter(u => u.usernameLower !== ADMIN_USER);
+      if (users.length === 0) {
+        body.innerHTML = `<div class="empty"><strong>No other users found.</strong></div>`;
+        return;
+      }
+      body.innerHTML = users.map(u => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-weight:700;font-size:0.95rem">${esc(u.username)}</div>
+            <div style="font-size:0.78rem;color:var(--muted)">${esc(u.email || '—')}</div>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser('${esc(u.username)}','${esc(u.uid||'')}')">Delete</button>
+        </div>
+      `).join('');
+    } catch (e) {
+      body.innerHTML = `<div style="color:var(--danger);font-size:0.83rem;text-align:center;padding:12px">Failed to load users. (${e.message})</div>`;
+    }
+  }
+
+  async function confirmDeleteUser(username, uid) {
+    if (!confirm(`Delete "${username}"? This will wipe all their data and ban them from signing in again.`)) return;
+    const body = document.getElementById('admin-body');
+    body.innerHTML = `<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:12px">Deleting ${esc(username)}…</div>`;
+    try {
+      // Delete subcollections under users/{username}
+      const subcols = ['catches', 'following', 'followers'];
+      await Promise.all(subcols.map(async col => {
+        const snap = await db.collection(`users/${username}/${col}`).get();
+        const batch = db.batch();
+        snap.docs.forEach(d => batch.delete(d.ref));
+        if (snap.docs.length) await batch.commit();
+      }));
+
+      // Delete usernames doc and users doc
+      const batch = db.batch();
+      batch.delete(db.collection('usernames').doc(username.toLowerCase()));
+      batch.delete(db.collection('users').doc(username));
+      if (uid) batch.set(db.collection('banned').doc(uid), { username, bannedAt: new Date().toISOString(), bannedBy: activeUser });
+      await batch.commit();
+
+      // Reload list
+      loadAdminUsers();
+    } catch (e) {
+      body.innerHTML = `<div style="color:var(--danger);font-size:0.83rem;text-align:center;padding:12px">Delete failed. (${e.message})</div>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:12px" onclick="loadAdminUsers()">Back</button>`;
+    }
+  }
+
   // Show loading while Firebase checks auth state
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('loading-overlay').classList.remove('hidden');
 
   auth.onAuthStateChanged(async user => {
     if (user) {
+      // Check if user has been banned
+      try {
+        const bannedDoc = await db.collection('banned').doc(user.uid).get();
+        if (bannedDoc.exists) {
+          await auth.signOut();
+          document.getElementById('loading-overlay').classList.add('hidden');
+          document.getElementById('login-screen').classList.remove('hidden');
+          setLoginMode('signin');
+          showLoginError('This account has been suspended.');
+          return;
+        }
+      } catch (_) {}
+
       const isGoogle = user.providerData.some(p => p.providerId === 'google.com');
       if (isGoogle && !pendingUsername) {
         // Look up stored username by UID

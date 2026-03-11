@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Username registry — any signed-in user can read; write allowed for account creation
+    match /usernames/{username} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // User data (catches, following, followers, profile, etc.)
+    // Any signed-in user can read all user data (needed for feed, profiles, search)
+    // Any signed-in user can write (follow/unfollow writes to both users' subcollections)
+    match /users/{userId}/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Messages (legacy path)
+    match /messages/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Reel Talk conversations and messages
+    match /reelTalk/{convId}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Banned users list — any signed-in user can read (to check if they're banned)
+    match /banned/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
