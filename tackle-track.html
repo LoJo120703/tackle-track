@@ -2194,7 +2194,7 @@
     try {
       const margin = 1.5;
       const usgsJson = await fetch(
-        `https://waterservices.usgs.gov/nwis/iv/?format=json&parameterCd=00010&bBox=${lng-margin},${lat-margin},${lng+margin},${lat+margin}&siteType=LK,ST&siteStatus=active`
+        `https://waterservices.usgs.gov/nwis/iv/?format=json&parameterCd=00010&bBox=${lng-margin},${lat-margin},${lng+margin},${lat+margin}&siteStatus=active`
       ).then(r => r.json());
 
       const series = usgsJson.value?.timeSeries || [];
