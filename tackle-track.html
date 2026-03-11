@@ -33,7 +33,7 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
+      background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cpath d='M20 30 Q35 18 50 30 Q65 42 80 30' fill='none' stroke='%230891b2' stroke-width='2.5' opacity='0.18'/%3E%3Cpath d='M120 160 Q135 148 150 160 Q165 172 180 160' fill='none' stroke='%230e7490' stroke-width='2.5' opacity='0.18'/%3E%3Cpath d='M140 40 L152 46 L140 52 Z' fill='%230891b2' opacity='0.15'/%3E%3Cellipse cx='148' cy='46' rx='10' ry='5' fill='none' stroke='%230891b2' stroke-width='1.8' opacity='0.18'/%3E%3Ccircle cx='155' cy='44.5' r='1.2' fill='%230f172a' opacity='0.2'/%3E%3Cpath d='M30 130 L42 136 L30 142 Z' fill='%230e7490' opacity='0.15'/%3E%3Cellipse cx='38' cy='136' rx='10' ry='5' fill='none' stroke='%230e7490' stroke-width='1.8' opacity='0.18'/%3E%3Ccircle cx='45' cy='134.5' r='1.2' fill='%230f172a' opacity='0.2'/%3E%3Cpath d='M100 95 Q102 85 108 88 Q106 95 108 102 Q102 105 100 95 Z' fill='none' stroke='%230891b2' stroke-width='1.8' opacity='0.16'/%3E%3Cline x1='100' y1='95' x2='95' y2='78' stroke='%230891b2' stroke-width='1.2' opacity='0.14'/%3E%3Ccircle cx='170' cy='105' r='3' fill='none' stroke='%2306b6d4' stroke-width='1.2' opacity='0.2'/%3E%3Ccircle cx='60' cy='75' r='2.5' fill='none' stroke='%2306b6d4' stroke-width='1' opacity='0.18'/%3E%3Ccircle cx='175' cy='25' r='2' fill='none' stroke='%2306b6d4' stroke-width='1' opacity='0.16'/%3E%3Ccircle cx='85' cy='175' r='3.5' fill='none' stroke='%2306b6d4' stroke-width='1.2' opacity='0.2'/%3E%3C/svg%3E") repeat;
       color: var(--text);
       min-height: 100vh;
       padding-bottom: calc(var(--nav-h) + 16px);
@@ -79,10 +79,11 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      transition: color 0.15s;
+      transition: color 0.15s, transform 0.15s;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
     }
+    nav button:hover { transform: scale(1.1); }
     nav button svg { width: 22px; height: 22px; stroke-width: 1.8; }
     nav button.active { color: #38bdf8; }
 
@@ -258,6 +259,46 @@
     }
     .fab:hover { background: var(--accent-dark); transform: scale(1.05); }
     .fab.hidden { display: none; }
+    .fab.pulse {
+      animation: fab-pulse 1.5s ease-in-out infinite;
+      box-shadow: 0 0 0 0 rgba(8,145,178,0.5);
+    }
+    @keyframes fab-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(8,145,178,0.5); }
+      70% { box-shadow: 0 0 0 14px rgba(8,145,178,0); }
+      100% { box-shadow: 0 0 0 0 rgba(8,145,178,0); }
+    }
+    .first-catch-prompt {
+      background: linear-gradient(135deg, #0e7490 0%, #0891b2 100%);
+      color: white;
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .first-catch-prompt h3 { font-size: 1.05rem; font-weight: 800; margin-bottom: 6px; }
+    .first-catch-prompt p { font-size: 0.85rem; opacity: 0.9; line-height: 1.5; margin-bottom: 14px; }
+    .first-catch-prompt .fcp-btn {
+      background: white;
+      color: var(--accent-dark);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 24px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .first-catch-prompt .fcp-dismiss {
+      display: block;
+      margin-top: 10px;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
 
     /* ── Performance bars ── */
     .perf-row { margin-bottom: 12px; }
@@ -440,7 +481,9 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      transition: transform 0.15s, box-shadow 0.15s;
     }
+    .user-card:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
     .user-avatar {
       width: 42px; height: 42px;
       border-radius: 50%;
@@ -542,7 +585,9 @@
       border-radius: var(--radius);
       margin-bottom: 12px;
       overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s;
     }
+    .feed-card:hover { transform: scale(1.015); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
     .feed-header {
       display: flex;
       align-items: center;
@@ -999,8 +1044,9 @@
       flex-direction: column;
       gap: 2px;
       -webkit-tap-highlight-color: transparent;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
-    .rt-conv-item:hover { border-color: var(--accent); }
+    .rt-conv-item:hover { border-color: var(--accent); transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
     .rt-conv-name { font-weight: 700; font-size: 0.9rem; }
     .rt-conv-preview { font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rt-bubble { max-width: 78%; padding: 8px 12px; border-radius: 16px; font-size: 0.88rem; line-height: 1.4; word-break: break-word; }
@@ -1158,6 +1204,102 @@
       line-height: 1.5;
       margin-bottom: 20px;
     }
+    /* ── Achievement Toast ── */
+    .achievement-toast-container {
+      position: fixed;
+      top: calc(var(--header-h) + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      width: 90%;
+      max-width: 400px;
+    }
+    .achievement-toast {
+      background: var(--navy);
+      color: white;
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      border: 1.5px solid #38bdf8;
+      animation: ach-in 0.4s ease-out, ach-out 0.4s ease-in 3.1s forwards;
+      pointer-events: auto;
+    }
+    .achievement-toast .ach-emoji { font-size: 1.6rem; flex-shrink: 0; }
+    .achievement-toast .ach-info { flex: 1; min-width: 0; }
+    .achievement-toast .ach-title { font-weight: 700; font-size: 0.85rem; }
+    .achievement-toast .ach-sub { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    @keyframes ach-in { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes ach-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-20px); } }
+
+    /* ── Achievement Grid ── */
+    .achievements-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 10px;
+    }
+    .achievement-badge {
+      text-align: center;
+      padding: 10px 6px;
+      border-radius: var(--radius-sm);
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+    }
+    .achievement-badge:hover {
+      transform: scale(1.08);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .achievement-badge.locked:hover {
+      opacity: 0.6;
+      filter: grayscale(0.5);
+    }
+    .achievement-badge.earned {
+      background: var(--accent-light);
+      border: 1.5px solid var(--accent);
+    }
+    .achievement-badge.locked {
+      opacity: 0.4;
+      filter: grayscale(1);
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+    }
+    .achievement-emoji { font-size: 1.5rem; margin-bottom: 4px; }
+    .achievement-name { font-size: 0.68rem; font-weight: 700; line-height: 1.2; }
+    .achievement-progress { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
+    .achievement-date { font-size: 0.6rem; color: var(--accent-dark); margin-top: 2px; }
+    .achievements-category { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 14px 0 6px; }
+    .achievements-category:first-child { margin-top: 0; }
+    .ach-detail-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .ach-detail-overlay.open { display: flex; }
+    .ach-detail-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      text-align: center;
+      max-width: 300px;
+      width: calc(100% - 40px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    }
+    .ach-detail-card .ach-d-emoji { font-size: 2.8rem; margin-bottom: 10px; }
+    .ach-detail-card .ach-d-name { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
+    .ach-detail-card .ach-d-cat { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 10px; }
+    .ach-detail-card .ach-d-desc { font-size: 0.88rem; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
+    .ach-detail-card .ach-d-status { font-size: 0.8rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; display: inline-block; }
+    .ach-detail-card .ach-d-status.earned { background: var(--accent-light); color: var(--accent-dark); }
+    .ach-detail-card .ach-d-status.locked { background: var(--bg); color: var(--muted); }
   </style>
 </head>
 <body>
@@ -1244,6 +1386,7 @@
     <span class="header-username" id="header-username" onclick="viewUserStats(activeUser)" style="cursor:pointer" title="View your profile"></span>
   </div>
 </header>
+<div id="achievement-toast-container" class="achievement-toast-container"></div>
 
 <main>
   <!-- ── Dashboard ── -->
@@ -1404,6 +1547,11 @@
     Stats
   </button>
 </nav>
+
+<!-- ── Achievement Detail ── -->
+<div class="ach-detail-overlay" id="ach-detail-overlay" onclick="if(event.target===this)closeAchDetail()">
+  <div class="ach-detail-card" id="ach-detail-card"></div>
+</div>
 
 <!-- ── Welcome Tour ── -->
 <div id="tour-overlay" class="tour-overlay hidden"></div>
@@ -1620,6 +1768,288 @@
   let likeCounts = {};
   let commentCounts = {};
   let openCommentBoxes = new Set();
+  let earnedAchievements = {};
+  let _achSocialCache = null;
+  let _achSocialCacheTime = 0;
+
+  // ── Achievement Definitions ────────────────────────────────────────────────
+  function toStandardLb(f) {
+    if (!f.weight) return 0;
+    return f.weightUnit === 'kg' ? f.weight * 2.20462 : f.weight;
+  }
+  function toStandardIn(f) {
+    if (!f.length) return 0;
+    return f.lengthUnit === 'cm' ? f.length / 2.54 : f.length;
+  }
+
+  const ACHIEVEMENTS = [
+    // Catch Milestones
+    { id:'first-cast', name:'First Cast', emoji:'🎣', cat:'Catch Milestones', desc:'Log your first catch', check:c=>c.total>=1, progress:c=>`${Math.min(c.total,1)}/1` },
+    { id:'getting-hooked', name:'Getting Hooked', emoji:'🪝', cat:'Catch Milestones', desc:'Log 10 catches', check:c=>c.total>=10, progress:c=>`${Math.min(c.total,10)}/10` },
+    { id:'reel-deal', name:'Reel Deal', emoji:'🏅', cat:'Catch Milestones', desc:'Log 25 catches', check:c=>c.total>=25, progress:c=>`${Math.min(c.total,25)}/25` },
+    { id:'seasoned-angler', name:'Seasoned Angler', emoji:'⭐', cat:'Catch Milestones', desc:'Log 50 catches', check:c=>c.total>=50, progress:c=>`${Math.min(c.total,50)}/50` },
+    { id:'century-club', name:'Century Club', emoji:'💯', cat:'Catch Milestones', desc:'Log 100 catches', check:c=>c.total>=100, progress:c=>`${Math.min(c.total,100)}/100` },
+    { id:'legend-lake', name:'Legend of the Lake', emoji:'👑', cat:'Catch Milestones', desc:'Log 250 catches', check:c=>c.total>=250, progress:c=>`${Math.min(c.total,250)}/250` },
+    // Species Diversity
+    { id:'explorer', name:'Explorer', emoji:'🔍', cat:'Species Diversity', desc:'Catch 3 different species', check:c=>c.speciesCount>=3, progress:c=>`${Math.min(c.speciesCount,3)}/3` },
+    { id:'variety-pack', name:'Variety Pack', emoji:'🌈', cat:'Species Diversity', desc:'Catch 5 different species', check:c=>c.speciesCount>=5, progress:c=>`${Math.min(c.speciesCount,5)}/5` },
+    { id:'species-hunter', name:'Species Hunter', emoji:'🎯', cat:'Species Diversity', desc:'Catch 10 different species', check:c=>c.speciesCount>=10, progress:c=>`${Math.min(c.speciesCount,10)}/10` },
+    { id:'biodiversity-king', name:'Biodiversity King', emoji:'🦠', cat:'Species Diversity', desc:'Catch 25 different species', check:c=>c.speciesCount>=25, progress:c=>`${Math.min(c.speciesCount,25)}/25` },
+    // Big Fish
+    { id:'nice-catch', name:'Nice Catch!', emoji:'💪', cat:'Big Fish', desc:'Catch a fish over 5 lbs', check:c=>c.maxLb>=5 },
+    { id:'heavy-hitter', name:'Heavy Hitter', emoji:'🏋️', cat:'Big Fish', desc:'Catch a fish over 10 lbs', check:c=>c.maxLb>=10 },
+    { id:'trophy-fish', name:'Trophy Fish', emoji:'🏆', cat:'Big Fish', desc:'Catch a fish over 20 lbs', check:c=>c.maxLb>=20 },
+    { id:'monster-hunter', name:'Monster Hunter', emoji:'🐉', cat:'Big Fish', desc:'Catch a fish over 50 lbs', check:c=>c.maxLb>=50 },
+    { id:'ruler', name:'Ruler', emoji:'📏', cat:'Big Fish', desc:'Catch a fish over 24 inches', check:c=>c.maxIn>=24 },
+    // Water & Conditions
+    { id:'fresh-start', name:'Fresh Start', emoji:'💧', cat:'Water & Conditions', desc:'Log a freshwater catch', check:c=>c.hasFresh },
+    { id:'salty-dog', name:'Salty Dog', emoji:'🌊', cat:'Water & Conditions', desc:'Log a saltwater catch', check:c=>c.hasSalt },
+    { id:'best-of-both', name:'Best of Both', emoji:'🌍', cat:'Water & Conditions', desc:'Log both freshwater and saltwater catches', check:c=>c.hasFresh&&c.hasSalt },
+    { id:'storm-chaser', name:'Storm Chaser', emoji:'🌧️', cat:'Water & Conditions', desc:'Log a catch in rainy weather', check:c=>c.weatherSet.has('rainy') },
+    { id:'wind-warrior', name:'Wind Warrior', emoji:'💨', cat:'Water & Conditions', desc:'Log a catch in windy weather', check:c=>c.weatherSet.has('windy') },
+    { id:'all-weather', name:'All-Weather Angler', emoji:'🌦️', cat:'Water & Conditions', desc:'Log catches in 4+ weather conditions', check:c=>c.weatherSet.size>=4, progress:c=>`${Math.min(c.weatherSet.size,4)}/4` },
+    // Social
+    { id:'networking', name:'Networking', emoji:'🤝', cat:'Social', desc:'Follow your first angler', check:c=>c.followingCount>=1 },
+    { id:'popular', name:'Popular', emoji:'🌟', cat:'Social', desc:'Get 5 followers', check:c=>c.followerCount>=5, progress:c=>`${Math.min(c.followerCount,5)}/5` },
+    { id:'community-builder', name:'Community Builder', emoji:'🏘️', cat:'Social', desc:'Follow 10 anglers', check:c=>c.followingCount>=10, progress:c=>`${Math.min(c.followingCount,10)}/10` },
+    { id:'liked', name:'Liked!', emoji:'❤️', cat:'Social', desc:'Get your first like on a catch', check:c=>c.totalLikesReceived>=1 },
+    { id:'fan-favorite', name:'Fan Favorite', emoji:'🔥', cat:'Social', desc:'Get 25 total likes', check:c=>c.totalLikesReceived>=25, progress:c=>`${Math.min(c.totalLikesReceived,25)}/25` },
+    { id:'convo-starter', name:'Conversation Starter', emoji:'💬', cat:'Social', desc:'Send your first Reel Talk message', check:c=>c.hasSentMessage },
+    { id:'commenter', name:'Commenter', emoji:'🗨️', cat:'Social', desc:'Leave your first comment', check:c=>c.hasCommented },
+    // Consistency
+    { id:'back-at-it', name:'Back at It', emoji:'🔄', cat:'Consistency', desc:'Log catches on 2 different days', check:c=>c.uniqueDays>=2, progress:c=>`${Math.min(c.uniqueDays,2)}/2` },
+    { id:'dedicated', name:'Dedicated', emoji:'📅', cat:'Consistency', desc:'Log catches on 7 different days', check:c=>c.uniqueDays>=7, progress:c=>`${Math.min(c.uniqueDays,7)}/7` },
+    { id:'weekly-warrior', name:'Weekly Warrior', emoji:'🗓️', cat:'Consistency', desc:'Log catches 7 days in a row', check:c=>c.maxStreak>=7, progress:c=>`${Math.min(c.maxStreak,7)}/7 streak` },
+    { id:'monthly-grind', name:'Monthly Grind', emoji:'💪', cat:'Consistency', desc:'Log catches in 4 different weeks of a month', check:c=>c.hasMonthlyGrind },
+    // Photo & Detail
+    { id:'shutterbug', name:'Shutterbug', emoji:'📸', cat:'Photo & Detail', desc:'Add a photo to a catch', check:c=>c.photoCount>=1 },
+    { id:'photographer', name:'Photographer', emoji:'📷', cat:'Photo & Detail', desc:'Log 10 catches with photos', check:c=>c.photoCount>=10, progress:c=>`${Math.min(c.photoCount,10)}/10` },
+    { id:'detail-oriented', name:'Detail Oriented', emoji:'🔬', cat:'Photo & Detail', desc:'Log a catch with all fields filled', check:c=>c.hasDetailedCatch },
+    // Time-Based
+    { id:'early-bird', name:'Early Bird', emoji:'🌅', cat:'Time-Based', desc:'Log a catch before 7 AM', check:c=>c.hasEarlyBird },
+    { id:'night-owl', name:'Night Owl', emoji:'🦉', cat:'Time-Based', desc:'Log a catch after 9 PM', check:c=>c.hasNightOwl },
+    { id:'weekend-warrior', name:'Weekend Warrior', emoji:'🎉', cat:'Time-Based', desc:'Log a catch on Saturday or Sunday', check:c=>c.hasWeekend },
+  ];
+
+  function buildAchievementContext(catchList, socialData) {
+    const cl = catchList || catches;
+    const allFish = cl.flatMap(c => getCatchFish(c));
+    const speciesSet = new Set(allFish.map(f => f.species).filter(Boolean));
+    const weatherSet = new Set(cl.map(c => c.weather).filter(Boolean));
+    const dates = cl.map(c => c.date).filter(Boolean);
+    const dateSet = new Set(dates);
+
+    // Max weight/length
+    let maxLb = 0, maxIn = 0;
+    allFish.forEach(f => { maxLb = Math.max(maxLb, toStandardLb(f)); maxIn = Math.max(maxIn, toStandardIn(f)); });
+
+    // Streak calculation
+    const sortedDates = [...dateSet].sort();
+    let maxStreak = sortedDates.length > 0 ? 1 : 0;
+    let curStreak = 1;
+    for (let i = 1; i < sortedDates.length; i++) {
+      const prev = new Date(sortedDates[i-1] + 'T00:00:00');
+      const curr = new Date(sortedDates[i] + 'T00:00:00');
+      const diff = (curr - prev) / 86400000;
+      if (diff === 1) { curStreak++; maxStreak = Math.max(maxStreak, curStreak); }
+      else curStreak = 1;
+    }
+
+    // Monthly grind: 4 different weeks in any single month
+    let hasMonthlyGrind = false;
+    const monthWeeks = {};
+    sortedDates.forEach(d => {
+      const dt = new Date(d + 'T00:00:00');
+      const mk = d.slice(0, 7);
+      if (!monthWeeks[mk]) monthWeeks[mk] = new Set();
+      const startOfYear = new Date(dt.getFullYear(), 0, 1);
+      const weekNum = Math.ceil(((dt - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+      monthWeeks[mk].add(weekNum);
+    });
+    for (const wks of Object.values(monthWeeks)) {
+      if (wks.size >= 4) { hasMonthlyGrind = true; break; }
+    }
+
+    // Photo & detail checks
+    const photoCount = cl.filter(c => c.photoURL).length;
+    const hasDetailedCatch = cl.some(c => {
+      const f = getCatchFish(c)[0];
+      return f && f.species && f.weight && f.length && c.location && c.weather && c.photoURL;
+    });
+
+    // Time-based checks (using createdAt field if available, else date for weekend)
+    let hasEarlyBird = false, hasNightOwl = false, hasWeekend = false;
+    cl.forEach(c => {
+      if (c.createdAt) {
+        const h = new Date(c.createdAt).getHours();
+        if (h < 7) hasEarlyBird = true;
+        if (h >= 21) hasNightOwl = true;
+      }
+      if (c.date) {
+        const day = new Date(c.date + 'T00:00:00').getDay();
+        if (day === 0 || day === 6) hasWeekend = true;
+      }
+    });
+
+    const sd = socialData || {};
+    return {
+      total: cl.length,
+      speciesCount: speciesSet.size,
+      weatherSet,
+      maxLb,
+      maxIn,
+      hasFresh: cl.some(c => c.water === 'fresh'),
+      hasSalt: cl.some(c => c.water === 'salt'),
+      uniqueDays: dateSet.size,
+      maxStreak,
+      hasMonthlyGrind,
+      photoCount,
+      hasDetailedCatch,
+      hasEarlyBird,
+      hasNightOwl,
+      hasWeekend,
+      followingCount: sd.followingCount ?? followingList.length,
+      followerCount: sd.followerCount ?? 0,
+      totalLikesReceived: sd.totalLikesReceived ?? 0,
+      hasSentMessage: sd.hasSentMessage ?? false,
+      hasCommented: sd.hasCommented ?? false,
+    };
+  }
+
+  // ── Achievement Engine ──────────────────────────────────────────────────────
+  async function loadAchievements(username) {
+    const u = username || activeUser;
+    try {
+      const doc = await db.doc(`users/${u}/profile/achievements`).get();
+      const data = doc.exists ? (doc.data().earned || {}) : {};
+      if (!username || u === activeUser) earnedAchievements = data;
+      return data;
+    } catch { return {}; }
+  }
+
+  // One-time reset: clear achievements saved by buggy startup sync so users get fresh toasts
+  // Remove this block after all users have loaded the app once
+  async function resetAchievementsOnce() {
+    const resetKey = 'tt_ach_reset_v1';
+    if (localStorage.getItem(resetKey)) return;
+    try {
+      await db.doc(`users/${activeUser}/profile/achievements`).delete();
+      earnedAchievements = {};
+      localStorage.setItem(resetKey, '1');
+      console.log('[Achievements] one-time reset done');
+    } catch(e) { console.warn('[Achievements] reset error:', e); }
+  }
+
+  async function fetchSocialAchievementData() {
+    const now = Date.now();
+    if (_achSocialCache && (now - _achSocialCacheTime) < 60000) return _achSocialCache;
+    try {
+      const [followerSnap, rtSnap] = await Promise.all([
+        db.collection(`users/${activeUser}/followers`).get(),
+        db.collection('reelTalk')
+          .where('participants', 'array-contains', activeUser.toLowerCase())
+          .limit(1).get()
+      ]);
+      // Count total likes received on own catches
+      let totalLikesReceived = 0;
+      for (const c of catches) {
+        if (!c.isPublic && c.isPublic !== undefined) continue;
+        try {
+          const likeSnap = await db.collection(`users/${activeUser}/catches/${c.id}/likes`).get();
+          totalLikesReceived += likeSnap.size;
+        } catch {}
+      }
+      // Check if user has commented anywhere
+      let hasCommented = false;
+      for (const u of followingList) {
+        try {
+          const cs = await db.collection(`users/${u}/catches`).limit(20).get();
+          for (const doc of cs.docs) {
+            const cmts = await db.collection(`users/${u}/catches/${doc.id}/comments`)
+              .where('author', '==', activeUser).limit(1).get();
+            if (!cmts.empty) { hasCommented = true; break; }
+          }
+          if (hasCommented) break;
+        } catch {}
+      }
+      _achSocialCache = {
+        followerCount: followerSnap.size,
+        followingCount: followingList.length,
+        totalLikesReceived,
+        hasSentMessage: !rtSnap.empty,
+        hasCommented,
+      };
+      _achSocialCacheTime = now;
+      return _achSocialCache;
+    } catch { return { followerCount: 0, followingCount: followingList.length, totalLikesReceived: 0, hasSentMessage: false, hasCommented: false }; }
+  }
+
+  async function checkAchievements(socialTrigger) {
+    if (!activeUser) return;
+    let socialData = null;
+    if (socialTrigger) {
+      _achSocialCache = null;
+      try { socialData = await fetchSocialAchievementData(); } catch(e) { console.warn('fetchSocial err:', e); }
+    }
+    const ctx = buildAchievementContext(null, socialData || _achSocialCache);
+    console.log('[Achievements] checking, catches:', ctx.total, 'species:', ctx.speciesCount, 'earned so far:', Object.keys(earnedAchievements).length);
+    const newlyEarned = [];
+    for (const a of ACHIEVEMENTS) {
+      if (earnedAchievements[a.id]) continue;
+      try {
+        if (a.check(ctx)) {
+          earnedAchievements[a.id] = new Date().toISOString();
+          newlyEarned.push(a);
+        }
+      } catch(e) { console.warn('[Achievements] check error for', a.id, e); }
+    }
+    console.log('[Achievements] newly earned:', newlyEarned.map(a => a.id));
+    if (newlyEarned.length > 0) {
+      db.doc(`users/${activeUser}/profile/achievements`).set({ earned: earnedAchievements }, { merge: true }).catch(console.error);
+      newlyEarned.forEach(a => queueAchievementToast(a));
+    }
+  }
+
+  async function revokeAchievements() {
+    if (!activeUser) return;
+    const ctx = buildAchievementContext(null, _achSocialCache);
+    let changed = false;
+    for (const a of ACHIEVEMENTS) {
+      if (!earnedAchievements[a.id]) continue;
+      try {
+        if (!a.check(ctx)) {
+          delete earnedAchievements[a.id];
+          changed = true;
+        }
+      } catch {}
+    }
+    if (changed) {
+      db.doc(`users/${activeUser}/profile/achievements`).set({ earned: earnedAchievements }).catch(console.error);
+    }
+  }
+
+  // ── Toast System ────────────────────────────────────────────────────────────
+  const toastQueue = [];
+  let toastActive = false;
+
+  function queueAchievementToast(achievement) {
+    toastQueue.push(achievement);
+    if (!toastActive) processToastQueue();
+  }
+
+  function processToastQueue() {
+    if (toastQueue.length === 0) { toastActive = false; return; }
+    toastActive = true;
+    const a = toastQueue.shift();
+    console.log('[Achievements] SHOWING TOAST for:', a.name);
+    const container = document.getElementById('achievement-toast-container');
+    if (!container) { console.error('[Achievements] toast container not found!'); toastActive = false; return; }
+    const el = document.createElement('div');
+    el.className = 'achievement-toast';
+    el.innerHTML = `<div class="ach-emoji">${a.emoji}</div><div class="ach-info"><div class="ach-title">Achievement Unlocked!</div><div class="ach-sub">${esc(a.name)} — ${esc(a.desc)}</div></div>`;
+    container.appendChild(el);
+    setTimeout(() => { el.remove(); processToastQueue(); }, 3500);
+  }
 
   // ── Map state ─────────────────────────────────────────────────────────────
   let mapInstance  = null;
@@ -1703,8 +2133,14 @@
     }
 
     await loadFollowing();
+    await loadAchievements();
+    await resetAchievementsOnce();
     document.getElementById('loading-overlay').classList.add('hidden');
-    showView('people');
+    history.replaceState({ view: 'people' }, '');
+    showView('people', true);
+    // Revoke any achievements that no longer qualify, then pre-fetch social data
+    revokeAchievements();
+    fetchSocialAchievementData().catch(() => {});
     registerProfile();
     loadProfilePic(username).then(url => setHeaderAvatar(url));
     // Pre-load NOAA stations in background while user is on People tab
@@ -1982,8 +2418,9 @@
   }
 
   // ── Navigation ────────────────────────────────────────────────────────────
-  function showView(v) {
+  function showView(v, skipPush) {
     currentView = v;
+    if (!skipPush) history.pushState({ view: v }, '');
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
     document.getElementById('view-' + v).classList.add('active');
@@ -1998,6 +2435,37 @@
     if (v === 'stats')     renderStats();
     if (v === 'people')    { activePeopleTab === 'feed' ? renderFeed() : renderPeopleView(); }
   }
+
+  window.addEventListener('popstate', (e) => {
+    if (!activeUser) return;
+
+    const achOpen   = document.getElementById('ach-detail-overlay')?.classList.contains('open');
+    const postOpen  = document.getElementById('post-detail-overlay')?.classList.contains('open');
+    const statsOpen = document.getElementById('user-stats-overlay')?.classList.contains('open');
+    const catchOpen = document.getElementById('catch-overlay')?.classList.contains('open');
+    const chatWrap  = document.getElementById('rt-chat-wrap');
+    const chatOpen  = chatWrap && chatWrap.style.display !== 'none';
+
+    if (achOpen)        closeAchDetail();
+    else if (postOpen)  closePostDetail();
+    else if (statsOpen) closeUserStats();
+    else if (catchOpen) closeCatchModal();
+    else if (chatOpen)  closeChat();
+    else if (e.state?.view) {
+      // Restore filters if present, otherwise reset them
+      if (e.state.view === 'catches') {
+        catchWaterFilter = e.state.filterVal && e.state.filterType === 'water' ? e.state.filterVal : 'all';
+        catchSpeciesFilter = e.state.filterVal && e.state.filterType === 'species' ? e.state.filterVal : 'all';
+      }
+      showView(e.state.view, true);
+    }
+    else {
+      // Reached the bottom of app history — stay on default view
+      // Push state back so user doesn't accidentally leave on next back press
+      history.pushState({ view: 'people' }, '');
+      showView('people', true);
+    }
+  });
 
   function openFab() {
     if (currentView === 'catches') openCatchModal();
@@ -2538,15 +3006,21 @@
     filtered = [...filtered].sort((a,b) => (b.date||'').localeCompare(a.date||''));
 
     const el = document.getElementById('catch-list');
+    const promptHTML = guidedFirstCatchActive ? `<div class="first-catch-prompt">
+      <h3>Log a Catch</h3>
+      <p>You don't have to be on the water right now! Think of your favorite catch or your most recent trip — log it here.</p>
+      <button class="fcp-btn" onclick="firstCatchLogNow()">Log a Catch</button>
+      <button class="fcp-dismiss" onclick="dismissFirstCatchPrompt()">I'll do it later</button>
+    </div>` : '';
     if (filtered.length === 0) {
-      el.innerHTML = `<div class="empty"><div class="icon">🐟</div><strong>${catches.length === 0 ? 'No catches logged yet' : 'No results'}</strong><p>${catches.length === 0 ? 'Tap + to log your first catch.' : 'Try a different filter.'}</p></div>`;
+      el.innerHTML = `${promptHTML}<div class="empty"><div class="icon">🐟</div><strong>${catches.length === 0 ? 'No catches logged yet' : 'No results'}</strong><p>${catches.length === 0 ? 'Tap + to log your first catch.' : 'Try a different filter.'}</p></div>`;
       return;
     }
 
     selfPostsMap = {};
     catches.filter(c => c.isPublic !== false).forEach(c => { selfPostsMap[c.id] = { ...c, _author: activeUser }; });
 
-    el.innerHTML = filtered.map(c => {
+    el.innerHTML = promptHTML + filtered.map(c => {
       const fish = getCatchFish(c);
       const fishNames = fish.map(f => esc(f.species || 'Unknown')).join(', ');
       const bigFish = fish.filter(f => f.weight > 0).sort((a,b) => b.weight - a.weight)[0];
@@ -2588,13 +3062,18 @@
   function setCatchFilter(type, val) {
     if (type === 'species') catchSpeciesFilter = val;
     if (type === 'water')   catchWaterFilter   = val;
+    history.pushState({ view: 'catches', filterType: type, filterVal: val }, '');
     renderCatches();
   }
 
   // ── Stats View ────────────────────────────────────────────────────────────
   function renderStats() {
     if (catches.length === 0) {
-      document.getElementById('stats-content').innerHTML = `<div class="empty"><div class="icon">📊</div><strong>No data yet</strong><p>Log catches to see performance stats.</p></div>`;
+      document.getElementById('stats-content').innerHTML = `<div class="empty"><div class="icon">📊</div><strong>No data yet</strong><p>Log catches to see performance stats.</p></div>
+        <div class="card" style="margin-top:16px">
+          <div class="sec-header"><span class="sec-title">Achievements</span><span style="font-size:0.78rem;color:var(--muted)">${Object.keys(earnedAchievements).length}/${ACHIEVEMENTS.length}</span></div>
+          ${renderAchievementsGrid(earnedAchievements, true)}
+        </div>`;
       return;
     }
 
@@ -2683,7 +3162,59 @@
           </div>`;
         }).join('')}
       </div>` : ''}
+
+      <div class="card">
+        <div class="sec-header">
+          <span class="sec-title">Achievements</span>
+          <span style="font-size:0.78rem;color:var(--muted)">${Object.keys(earnedAchievements).length}/${ACHIEVEMENTS.length}</span>
+        </div>
+        ${renderAchievementsGrid(earnedAchievements, true)}
+      </div>
     `;
+  }
+
+  function renderAchievementsGrid(earned, showProgress) {
+    const ctx = showProgress ? buildAchievementContext() : null;
+    const categories = [];
+    const seen = new Set();
+    ACHIEVEMENTS.forEach(a => { if (!seen.has(a.cat)) { seen.add(a.cat); categories.push(a.cat); } });
+    return categories.map(cat => {
+      const badges = ACHIEVEMENTS.filter(a => a.cat === cat);
+      return `<div class="achievements-category">${esc(cat)}</div>
+        <div class="achievements-grid">${badges.map(a => {
+          const isEarned = !!earned[a.id];
+          return `<div class="achievement-badge ${isEarned ? 'earned' : 'locked'}" onclick="showAchDetail('${a.id}')" style="cursor:pointer">
+            <div class="achievement-emoji">${a.emoji}</div>
+            <div class="achievement-name">${esc(a.name)}</div>
+            ${!isEarned && showProgress && a.progress && ctx ? `<div class="achievement-progress">${a.progress(ctx)}</div>` : ''}
+            ${isEarned && earned[a.id] ? `<div class="achievement-date">${fmtDate(earned[a.id].slice(0,10))}</div>` : ''}
+          </div>`;
+        }).join('')}</div>`;
+    }).join('');
+  }
+
+  function showAchDetail(id) {
+    const a = ACHIEVEMENTS.find(x => x.id === id);
+    if (!a) return;
+    const isEarned = !!earnedAchievements[a.id];
+    const ctx = buildAchievementContext();
+    const progress = !isEarned && a.progress ? a.progress(ctx) : null;
+    const earnedDate = isEarned ? fmtDate(earnedAchievements[a.id].slice(0, 10)) : null;
+
+    document.getElementById('ach-detail-card').innerHTML = `
+      <div class="ach-d-emoji">${a.emoji}</div>
+      <div class="ach-d-name">${esc(a.name)}</div>
+      <div class="ach-d-cat">${esc(a.cat)}</div>
+      <div class="ach-d-desc">${esc(a.desc)}</div>
+      ${progress ? `<div style="font-size:0.8rem;color:var(--muted);margin-bottom:12px">Progress: ${progress}</div>` : ''}
+      <div class="ach-d-status ${isEarned ? 'earned' : 'locked'}">${isEarned ? 'Earned ' + earnedDate : 'Locked'}</div>
+    `;
+    document.getElementById('ach-detail-overlay').classList.add('open');
+    history.pushState({ overlay: 'ach-detail' }, '', '');
+  }
+
+  function closeAchDetail() {
+    document.getElementById('ach-detail-overlay').classList.remove('open');
   }
 
   // ── Catch Modal ───────────────────────────────────────────────────────────
@@ -2726,6 +3257,7 @@
     }
 
     document.getElementById('catch-overlay').classList.add('open');
+    history.pushState({ overlay: 'catch-modal' }, '', '');
     setTimeout(() => {
       const first = document.getElementById('fish-species-0');
       if (first) first.focus();
@@ -2777,6 +3309,7 @@
       lat:      pendingLat,
       lng:      pendingLng,
       photoURL: pendingCatchPhotoURL,
+      createdAt: new Date().toISOString(),
     };
 
     let saved;
@@ -2790,8 +3323,10 @@
     }
 
     syncCatch(saved);
+    if (guidedFirstCatchActive) { guidedFirstCatchActive = false; document.getElementById('fab').classList.remove('pulse'); }
     closeCatchModal();
     renderCatches();
+    checkAchievements();
     document.getElementById('species-list').innerHTML = getSpeciesList().map(s => `<option value="${esc(s)}"></option>`).join('');
   }
 
@@ -2812,7 +3347,7 @@
   function confirmDelete() {
     const type = deletingType;
     const id   = deletingId;
-    if (type === 'catch') { catches = catches.filter(c => c.id !== id); removeCatch(id); }
+    if (type === 'catch') { catches = catches.filter(c => c.id !== id); removeCatch(id); revokeAchievements(); }
     closeConfirm();
     if (type === 'catch') renderCatches();
     if (currentView === 'dashboard') renderDashboard();
@@ -3074,6 +3609,7 @@
       batch.set(db.doc(`users/${username}/followers/${activeUser}`), { followedAt: now });
       await batch.commit();
       if (!followingList.includes(username)) followingList.push(username);
+      checkAchievements(true);
       renderSuggestions();
       renderPeopleView();
       renderSearchResults(peopleSearchResults);
@@ -3216,14 +3752,17 @@
     document.getElementById('user-stats-title').textContent = username;
     document.getElementById('user-stats-body').innerHTML = `<div class="empty"><div class="spinner"></div></div>`;
     document.getElementById('user-stats-overlay').classList.add('open');
+    history.pushState({ overlay: 'user-stats' }, '', '');
 
     try {
       await loadProfilePic(username);
-      const [catchSnap, followerSnap, followingSnap] = await Promise.all([
+      const [catchSnap, followerSnap, followingSnap, achDoc] = await Promise.all([
         db.collection(`users/${username}/catches`).get(),
         db.collection(`users/${username}/followers`).get(),
-        db.collection(`users/${username}/following`).get()
+        db.collection(`users/${username}/following`).get(),
+        db.doc(`users/${username}/profile/achievements`).get()
       ]);
+      const userAch = achDoc.exists ? (achDoc.data().earned || {}) : {};
 
       const uCatches = catchSnap.docs.map(d => d.data());
       const followerCount  = followerSnap.size;
@@ -3292,6 +3831,22 @@
           <div class="stat-card"><div class="val">${uCatches.filter(c=>c.water==='fresh').length}</div><div class="lbl">Freshwater</div></div>
           <div class="stat-card"><div class="val">${uCatches.filter(c=>c.water==='salt').length}</div><div class="lbl">Saltwater</div></div>
         </div>
+
+        ${Object.keys(userAch).length > 0 ? `
+        <div class="card">
+          <div class="sec-header">
+            <span class="sec-title">Achievements</span>
+            <span style="font-size:0.78rem;color:var(--muted)">${Object.keys(userAch).length}/${ACHIEVEMENTS.length}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            ${ACHIEVEMENTS.filter(a => userAch[a.id]).map(a => `
+              <div class="achievement-badge earned" style="min-width:70px;flex:0 0 auto" title="${esc(a.desc)}">
+                <div class="achievement-emoji">${a.emoji}</div>
+                <div class="achievement-name">${esc(a.name)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>` : ''}
 
         ${speciesList.length > 0 ? `
         <div class="card">
@@ -3402,6 +3957,7 @@
       </div>
     `;
     document.getElementById('post-detail-overlay').classList.add('open');
+    history.pushState({ overlay: 'post-detail' }, '', '');
   }
 
   function closePostDetail() {
@@ -3511,6 +4067,7 @@
     activeConvId = convId(activeUser, otherUsername);
     document.getElementById('rt-conv-list-wrap').style.display = 'none';
     document.getElementById('rt-chat-wrap').style.display = 'block';
+    history.pushState({ overlay: 'chat' }, '', '');
     document.getElementById('rt-chat-title').textContent = otherUsername;
     document.getElementById('rt-messages').innerHTML = `<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:12px">Loading…</div>`;
     rtUnsubscribe = db.collection(`reelTalk/${activeConvId}/messages`)
@@ -3557,6 +4114,7 @@
         lastFrom: activeUser.toLowerCase()
       }, { merge: true });
       await msgRef.set({ from: activeUser.toLowerCase(), body, createdAt: now });
+      checkAchievements(true);
     } catch(e) {
       input.value = body;
     }
@@ -3581,6 +4139,74 @@
     document.getElementById('people-anglers-panel').style.display = tab === 'anglers' ? 'block' : 'none';
     if (tab === 'feed')    renderFeed();
     if (tab === 'anglers') { renderSuggestions(); renderPeopleView(); }
+  }
+
+  // ── Feed Suggestions (shown when feed is empty) ──────────────────────────
+  async function loadFeedSuggestions() {
+    const el = document.getElementById('feed-suggestions');
+    if (!el) return;
+    try {
+      const snap = await db.collection('usernames').limit(40).get();
+      const candidates = snap.docs
+        .map(d => d.data())
+        .filter(u => u.username && u.username.toLowerCase() !== activeUser.toLowerCase()
+          && !followingList.map(f => f.toLowerCase()).includes(u.username.toLowerCase()));
+
+      if (candidates.length === 0) {
+        el.innerHTML = `<div style="color:var(--muted);font-size:0.83rem;padding:8px 0">No anglers found yet. Be the first!</div>`;
+        return;
+      }
+
+      // Load stats for each candidate to rank by activity
+      const stats = await Promise.all(candidates.slice(0, 15).map(async u => {
+        try {
+          const [cs, fs] = await Promise.all([
+            db.collection(`users/${u.username}/catches`).get(),
+            db.collection(`users/${u.username}/followers`).get()
+          ]);
+          const catchDocs = cs.docs.map(d => d.data());
+          const species = [...new Set(catchDocs.flatMap(c => getCatchFish(c).map(f => f.species)).filter(Boolean))];
+          const recentCatch = catchDocs.sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
+          return { username: u.username, catches: cs.size, followers: fs.size, species, recentCatch };
+        } catch { return { username: u.username, catches: 0, followers: 0, species: [], recentCatch: null }; }
+      }));
+
+      // Rank by catch count descending, take top 5
+      const ranked = stats.sort((a, b) => b.catches - a.catches).slice(0, 5);
+
+      await Promise.all(ranked.map(s => loadProfilePic(s.username)));
+
+      el.innerHTML = ranked.map(s => {
+        const pic = profilePicCache[s.username] || null;
+        const meta = [
+          s.catches > 0 ? `${s.catches} catch${s.catches !== 1 ? 'es' : ''}` : null,
+          s.species.length > 0 ? s.species.slice(0, 3).join(', ') : null,
+          s.followers > 0 ? `${s.followers} follower${s.followers !== 1 ? 's' : ''}` : null,
+        ].filter(Boolean).join(' · ');
+        return `<div class="user-card">
+          ${avatarHTML(s.username, pic, 42, true)}
+          <div class="user-info">
+            <div class="user-name">${esc(s.username)}</div>
+            <div class="user-meta">${meta || 'New angler'}</div>
+          </div>
+          <div class="user-actions">
+            <button class="btn btn-sm btn-follow" onclick="followFromSuggestion(this,'${esc(s.username)}')">Follow</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      console.warn('loadFeedSuggestions error:', e);
+      el.innerHTML = '';
+    }
+  }
+
+  async function followFromSuggestion(btn, username) {
+    btn.disabled = true;
+    btn.textContent = 'Following';
+    btn.className = 'btn btn-sm btn-unfollow';
+    await followUser(username);
+    // If they now follow someone, refresh the feed
+    if (followingList.length > 0) renderFeed();
   }
 
   // ── Likes & comments ──────────────────────────────────────────────────────
@@ -3686,6 +4312,7 @@
       const countEl = document.getElementById(`comment-count-${catchId}`);
       if (countEl) countEl.textContent = commentCounts[key];
       loadComments(author, catchId);
+      checkAchievements(true);
     } catch { alert('Failed to post comment. Try again.'); }
     finally { input.disabled = false; input.focus(); }
   }
@@ -3706,7 +4333,9 @@
     const el = document.getElementById('feed-content');
 
     if (followingList.length === 0) {
-      el.innerHTML = `<div class="empty"><div class="icon">🎣</div><strong>Nothing in your feed yet</strong><p>Go to Anglers and follow some users to see their catches here.</p></div>`;
+      el.innerHTML = `<div class="empty"><div class="icon">🎣</div><strong>Nothing in your feed yet</strong><p>Follow some anglers to see their catches here.</p></div>
+        <div style="margin-top:12px"><div class="sec-header"><span class="sec-title">Suggested Anglers</span></div><div id="feed-suggestions"><div style="color:var(--muted);font-size:0.83rem;padding:8px 0">Finding anglers…</div></div></div>`;
+      loadFeedSuggestions();
       return;
     }
 
@@ -4302,11 +4931,37 @@
       overlay.classList.add('hidden');
       overlay.innerHTML = '';
       localStorage.setItem('tackletrack_tour_done', '1');
-      // Land user on catches tab so they can log their first catch
-      showView('catches');
+      startGuidedFirstCatch();
     }
 
     renderStep();
+  }
+
+  let guidedFirstCatchActive = false;
+
+  function startGuidedFirstCatch() {
+    showView('catches');
+    guidedFirstCatchActive = true;
+    // Pulse the FAB
+    const fab = document.getElementById('fab');
+    fab.classList.remove('hidden');
+    fab.classList.add('pulse');
+    // Re-render catches so the prompt card shows
+    renderCatches();
+  }
+
+  function dismissFirstCatchPrompt() {
+    guidedFirstCatchActive = false;
+    const fab = document.getElementById('fab');
+    fab.classList.remove('pulse');
+    renderCatches();
+  }
+
+  function firstCatchLogNow() {
+    guidedFirstCatchActive = false;
+    const fab = document.getElementById('fab');
+    fab.classList.remove('pulse');
+    openCatchModal();
   }
 
   function replayWelcomeTour() {
