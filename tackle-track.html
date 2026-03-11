@@ -1642,7 +1642,7 @@
   // ── Temperature widget state ───────────────────────────────────────────────
   let nearestTideStation = null;
   try { localStorage.removeItem('tt_tide_station'); } catch(_) {}
-  const tempState = { air: null, water: null, waterLoading: false };
+  const tempState = { air: null, water: null, waterLoading: false, waterSource: null, waterStation: null };
 
   const USERS_KEY = 'tt_users';
   let activeUser  = null;
@@ -2108,10 +2108,17 @@
       : tempState.waterLoading
         ? '<span style="opacity:.5;font-size:0.85em">Loading…</span>'
         : '—';
+    const waterLbl = tempState.waterSource === 'ocean'   ? 'Ocean Temp'
+                   : tempState.waterSource === 'coastal' ? 'Coastal Water Temp'
+                   : tempState.waterSource === 'river'   ? 'Lake / River Temp'
+                   : 'Water Temperature';
+    const stationNote = tempState.waterStation
+      ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:2px">${esc(tempState.waterStation)}</div>`
+      : '';
     document.getElementById('temp-body').innerHTML = `
       <div class="stats-grid" style="margin-bottom:0">
         <div class="stat-card"><div class="val">${fmt(tempState.air)}</div><div class="lbl">Air Temperature</div></div>
-        <div class="stat-card"><div class="val" style="color:#0891b2">${waterVal}</div><div class="lbl">Water Temperature</div></div>
+        <div class="stat-card"><div class="val" style="color:#0891b2">${waterVal}</div><div class="lbl">${waterLbl}</div>${stationNote}</div>
       </div>
     `;
   }
@@ -2142,7 +2149,9 @@
           if (temps[i] != null && new Date(times[i]).getTime() <= now + 3600000) best = temps[i];
         }
         if (best != null) {
-          tempState.water = best; // already Celsius
+          tempState.water = best;
+          tempState.waterSource = 'ocean';
+          tempState.waterStation = null;
           if (windCache) windCache.waterTemp = tempState.water;
           tempState.waterLoading = false;
           updateTempWidget();
@@ -2151,7 +2160,7 @@
       }
     } catch(_) {}
 
-    // Fallback: NOAA sensor stations (more accurate when available)
+    // Fallback: NOAA sensor stations (coastal)
     try {
       preloadNoaaStations();
       const stJson = await _noaaStationsPromise;
@@ -2169,6 +2178,8 @@
             const f = parseFloat(arr[arr.length - 1].v);
             if (!isNaN(f)) {
               tempState.water = (f - 32) * 5 / 9;
+              tempState.waterSource = 'coastal';
+              tempState.waterStation = null;
               if (windCache) windCache.waterTemp = tempState.water;
               tempState.waterLoading = false;
               updateTempWidget();
@@ -2179,15 +2190,15 @@
       }
     } catch(_) {}
 
-    // Second fallback: USGS real-time sensors (lakes & rivers)
+    // Second fallback: USGS real-time sensors (lakes & rivers, US only)
     try {
-      const margin = 0.5;
+      const margin = 1.5;
       const usgsJson = await fetch(
         `https://waterservices.usgs.gov/nwis/iv/?format=json&parameterCd=00010&bBox=${lng-margin},${lat-margin},${lng+margin},${lat+margin}&siteType=LK,ST&siteStatus=active`
       ).then(r => r.json());
 
       const series = usgsJson.value?.timeSeries || [];
-      let best = null, bestDist = Infinity;
+      let best = null, bestDist = Infinity, bestName = null;
       for (const ts of series) {
         const loc = ts.sourceInfo?.geoLocation?.geogLocation;
         if (!loc) continue;
@@ -2196,11 +2207,17 @@
         if (!vals?.length) continue;
         const v = parseFloat(vals[vals.length - 1].value);
         if (isNaN(v) || v < -2 || v > 40) continue;
-        if (d < bestDist) { bestDist = d; best = v; }
+        if (d < bestDist) {
+          bestDist = d;
+          best = v;
+          bestName = ts.sourceInfo?.siteName || null;
+        }
       }
 
       if (best != null) {
-        tempState.water = best; // already Celsius
+        tempState.water = best;
+        tempState.waterSource = 'river';
+        tempState.waterStation = bestName;
         if (windCache) windCache.waterTemp = tempState.water;
       }
     } catch(_) {}
@@ -2249,7 +2266,7 @@
       const mapLink = document.getElementById('wind-map-link');
       if (mapLink) mapLink.style.display = 'none';
       try {
-        tempState.air = null; tempState.water = null; tempState.waterLoading = true;
+        tempState.air = null; tempState.water = null; tempState.waterLoading = true; tempState.waterSource = null; tempState.waterStation = null;
 
         let locationName = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
         const [weatherJson, isCoastal] = await Promise.all([
@@ -4001,7 +4018,7 @@
     if (body) body.innerHTML = '<div class="wind-loading">Fetching wind data…</div>';
     document.getElementById('wind-location').textContent = locationName || `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
     try {
-      tempState.air = null; tempState.water = null; tempState.waterLoading = true;
+      tempState.air = null; tempState.water = null; tempState.waterLoading = true; tempState.waterSource = null; tempState.waterStation = null;
 
       const [weatherJson, isCoastal] = await Promise.all([
         fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m&wind_speed_unit=mph&timezone=auto`).then(r => r.json()).catch(() => ({})),
